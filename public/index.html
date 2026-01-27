@@ -44,40 +44,111 @@
             padding: 20px;
         }
 
-        /* Header */
-        header {
-            text-align: center;
-            padding: 40px 20px;
+        /* Top Navigation */
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
             border-bottom: 1px solid var(--border);
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
 
-        .logo {
+        .nav-brand {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 16px;
+            gap: 10px;
+            text-decoration: none;
         }
 
-        .logo-icon {
-            width: 48px;
-            height: 48px;
+        .nav-brand .logo-icon {
+            width: 36px;
+            height: 36px;
             background: var(--gradient);
-            border-radius: 12px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 18px;
         }
 
-        h1 {
-            font-size: 2.5rem;
+        .nav-brand h1 {
+            font-size: 1.5rem;
             font-weight: 700;
             background: var(--gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .auth-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .auth-btn.primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .auth-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .auth-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .auth-btn.secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 30px 20px;
+            margin-bottom: 30px;
         }
 
         .tagline {
@@ -92,14 +163,63 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            margin-top: 16px;
+            margin-top: 12px;
             font-size: 0.85rem;
             color: var(--text-muted);
         }
 
-        .powered-by img {
-            height: 20px;
-            opacity: 0.7;
+        /* User Stats Card */
+        .user-stats-card {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(249, 115, 22, 0.05) 100%);
+            border: 1px solid rgba(249, 115, 22, 0.2);
+            border-radius: 16px;
+            padding: 20px 24px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .user-stats-card.visible {
+            display: block;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .stats-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 16px;
+            background: var(--bg-card);
+            border-radius: 12px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
         }
 
         /* Input Section */
@@ -460,6 +580,172 @@
             width: 80%;
         }
 
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            width: 100%;
+            max-width: 420px;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .modal-header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .modal-tab {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .modal-submit {
+            width: 100%;
+            padding: 14px;
+            background: var(--gradient);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .modal-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
+        }
+
+        .modal-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal-error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .modal-error.visible {
+            display: block;
+        }
+
         /* Footer */
         footer {
             text-align: center;
@@ -488,15 +774,60 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .top-nav {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .nav-user {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .input-wrapper {
+                flex-direction: column;
+            }
+
+            .submit-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="logo">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <a href="/" class="nav-brand">
                 <div class="logo-icon">📄</div>
                 <h1>ByteSummary</h1>
+            </a>
+            <div class="nav-user" id="navUser">
+                <!-- Guest State -->
+                <div id="guestNav">
+                    <button class="auth-btn secondary" onclick="showAuthModal('login')">Log In</button>
+                    <button class="auth-btn primary" onclick="showAuthModal('register')">Sign Up</button>
+                </div>
+                <!-- Logged In State -->
+                <div id="userNav" style="display: none;">
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">U</div>
+                        <span class="user-name" id="userName">User</span>
+                    </div>
+                    <button class="auth-btn secondary" onclick="logout()">Log Out</button>
+                </div>
             </div>
+        </nav>
+
+        <header>
             <p class="tagline">Get instant AI-powered summaries of any tech article, blog post, or documentation</p>
             <div class="powered-by">
                 <span>Powered by</span>
@@ -504,6 +835,27 @@
                 <span>⚡</span>
             </div>
         </header>
+
+        <!-- User Stats Card -->
+        <div class="user-stats-card" id="userStatsCard">
+            <div class="stats-header">
+                <h3>👋 Welcome back, <span id="statsUserName">User</span>!</h3>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="statsTotalSummaries">0</div>
+                    <div class="stat-label">Total Summaries</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statsThisWeek">0</div>
+                    <div class="stat-label">This Week</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statsSavedTime">0</div>
+                    <div class="stat-label">Minutes Saved</div>
+                </div>
+            </div>
+        </div>
 
         <section class="input-section">
             <div class="input-wrapper">
@@ -547,7 +899,7 @@
                 <div class="history-header">
                     <h3>
                         <span>🕐</span>
-                        Recent
+                        <span id="historyTitle">Recent</span>
                     </h3>
                     <button class="clear-btn" onclick="clearHistory()">Clear</button>
                 </div>
@@ -562,21 +914,238 @@
         </footer>
     </div>
 
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="authModal">
+        <div class="modal" style="position: relative;">
+            <button class="modal-close" onclick="hideAuthModal()">&times;</button>
+            <div class="modal-header">
+                <h2 id="modalTitle">Welcome</h2>
+                <p id="modalSubtitle">Sign in to save your summaries</p>
+            </div>
+            <div class="modal-tabs">
+                <button class="modal-tab active" id="loginTab" onclick="switchTab('login')">Log In</button>
+                <button class="modal-tab" id="registerTab" onclick="switchTab('register')">Sign Up</button>
+            </div>
+            <div class="modal-error" id="modalError"></div>
+            <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label for="authName">Name</label>
+                    <input type="text" id="authName" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label for="authEmail">Email</label>
+                    <input type="email" id="authEmail" placeholder="you@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="authPassword">Password</label>
+                    <input type="password" id="authPassword" placeholder="••••••••" required minlength="6">
+                </div>
+                <button type="submit" class="modal-submit" id="authSubmitBtn">Log In</button>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // API Configuration - same origin since Worker serves both static and API
+        // State
+        let currentUser = null;
+        let authMode = 'login';
+
+        // API Configuration
         const API_BASE = '';
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuth();
             loadHistory();
             
-            // Enter key to submit
             document.getElementById('urlInput').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     summarizeUrl();
                 }
             });
+
+            // Close modal on overlay click
+            document.getElementById('authModal').addEventListener('click', (e) => {
+                if (e.target.id === 'authModal') {
+                    hideAuthModal();
+                }
+            });
         });
+
+        // ==================== AUTH FUNCTIONS ====================
+
+        async function checkAuth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/me`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.user) {
+                    currentUser = data.user;
+                    updateUIForUser();
+                    loadUserStats();
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        }
+
+        function updateUIForUser() {
+            const guestNav = document.getElementById('guestNav');
+            const userNav = document.getElementById('userNav');
+            const userAvatar = document.getElementById('userAvatar');
+            const userName = document.getElementById('userName');
+            const userStatsCard = document.getElementById('userStatsCard');
+            const statsUserName = document.getElementById('statsUserName');
+            const historyTitle = document.getElementById('historyTitle');
+
+            if (currentUser) {
+                guestNav.style.display = 'none';
+                userNav.style.display = 'flex';
+                userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
+                userName.textContent = currentUser.name;
+                userStatsCard.classList.add('visible');
+                statsUserName.textContent = currentUser.name;
+                historyTitle.textContent = 'Your History';
+            } else {
+                guestNav.style.display = 'flex';
+                userNav.style.display = 'none';
+                userStatsCard.classList.remove('visible');
+                historyTitle.textContent = 'Recent';
+            }
+        }
+
+        async function loadUserStats() {
+            if (!currentUser) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/user/stats`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+
+                document.getElementById('statsTotalSummaries').textContent = data.totalSummaries || 0;
+                
+                // Calculate this week's summaries
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                const thisWeek = (data.recentActivity || []).filter(item => 
+                    new Date(item.timestamp) > oneWeekAgo
+                ).length;
+                document.getElementById('statsThisWeek').textContent = thisWeek;
+
+                // Estimate time saved (5 min per article)
+                document.getElementById('statsSavedTime').textContent = (data.totalSummaries || 0) * 5;
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        function showAuthModal(mode = 'login') {
+            authMode = mode;
+            switchTab(mode);
+            document.getElementById('authModal').classList.add('active');
+            document.getElementById('authEmail').focus();
+        }
+
+        function hideAuthModal() {
+            document.getElementById('authModal').classList.remove('active');
+            document.getElementById('modalError').classList.remove('visible');
+            document.getElementById('authForm').reset();
+        }
+
+        function switchTab(mode) {
+            authMode = mode;
+            const loginTab = document.getElementById('loginTab');
+            const registerTab = document.getElementById('registerTab');
+            const nameGroup = document.getElementById('nameGroup');
+            const submitBtn = document.getElementById('authSubmitBtn');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalSubtitle = document.getElementById('modalSubtitle');
+
+            if (mode === 'login') {
+                loginTab.classList.add('active');
+                registerTab.classList.remove('active');
+                nameGroup.style.display = 'none';
+                submitBtn.textContent = 'Log In';
+                modalTitle.textContent = 'Welcome Back';
+                modalSubtitle.textContent = 'Sign in to access your summaries';
+            } else {
+                loginTab.classList.remove('active');
+                registerTab.classList.add('active');
+                nameGroup.style.display = 'block';
+                submitBtn.textContent = 'Create Account';
+                modalTitle.textContent = 'Get Started';
+                modalSubtitle.textContent = 'Create an account to save your summaries';
+            }
+
+            document.getElementById('modalError').classList.remove('visible');
+        }
+
+        async function handleAuthSubmit(event) {
+            event.preventDefault();
+            
+            const submitBtn = document.getElementById('authSubmitBtn');
+            const errorEl = document.getElementById('modalError');
+            
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const name = document.getElementById('authName').value;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = authMode === 'login' ? 'Logging in...' : 'Creating account...';
+            errorEl.classList.remove('visible');
+
+            try {
+                const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+                const body = authMode === 'login' 
+                    ? { email, password }
+                    : { email, password, name };
+
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Authentication failed');
+                }
+
+                currentUser = data.user;
+                updateUIForUser();
+                loadHistory();
+                loadUserStats();
+                hideAuthModal();
+            } catch (error) {
+                errorEl.textContent = error.message;
+                errorEl.classList.add('visible');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = authMode === 'login' ? 'Log In' : 'Create Account';
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch(`${API_BASE}/api/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                currentUser = null;
+                updateUIForUser();
+                loadHistory();
+            } catch (error) {
+                console.error('Logout failed:', error);
+            }
+        }
+
+        // ==================== SUMMARY FUNCTIONS ====================
 
         async function summarizeUrl() {
             const urlInput = document.getElementById('urlInput');
@@ -584,10 +1153,8 @@
             const errorContainer = document.getElementById('errorContainer');
             const url = urlInput.value.trim();
 
-            // Clear previous errors
             errorContainer.innerHTML = '';
 
-            // Validate URL
             if (!url) {
                 showError('Please enter a URL');
                 return;
@@ -600,15 +1167,13 @@
                 return;
             }
 
-            // Show loading state
             setLoading(true);
 
             try {
                 const response = await fetch(`${API_BASE}/api/summarize`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ url }),
                 });
 
@@ -619,7 +1184,8 @@
                 }
 
                 displaySummary(data);
-                loadHistory(); // Refresh history
+                loadHistory();
+                if (currentUser) loadUserStats();
             } catch (error) {
                 showError(error.message);
             } finally {
@@ -658,7 +1224,6 @@
             const summaryTimestamp = document.getElementById('summaryTimestamp');
             const cacheBadge = document.getElementById('cacheBadge');
 
-            // Convert markdown to HTML (basic conversion)
             const htmlContent = markdownToHtml(data.summary);
 
             summaryContent.innerHTML = `
@@ -677,30 +1242,19 @@
 
         function markdownToHtml(markdown) {
             return markdown
-                // Headers
                 .replace(/^### (.*$)/gm, '<h3>$1</h3>')
                 .replace(/^## (.*$)/gm, '<h2>$1</h2>')
                 .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-                // Bold
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                // Italic
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                // Code blocks
                 .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-                // Inline code
                 .replace(/`([^`]+)`/g, '<code>$1</code>')
-                // Unordered lists
                 .replace(/^\s*[-*]\s+(.*$)/gm, '<li>$1</li>')
-                // Wrap consecutive li elements in ul
                 .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-                // Numbered lists
                 .replace(/^\s*\d+\.\s+(.*$)/gm, '<li>$1</li>')
-                // Line breaks to paragraphs
                 .replace(/\n\n/g, '</p><p>')
-                // Wrap in paragraph
                 .replace(/^(?!<[hulo])/gm, '<p>')
                 .replace(/(?<![>])$/gm, '</p>')
-                // Clean up empty paragraphs
                 .replace(/<p><\/p>/g, '')
                 .replace(/<p>(<[hulo])/g, '$1')
                 .replace(/(<\/[hulo].*>)<\/p>/g, '$1');
@@ -718,7 +1272,9 @@
 
         async function loadHistory() {
             try {
-                const response = await fetch(`${API_BASE}/api/history`);
+                const response = await fetch(`${API_BASE}/api/history`, {
+                    credentials: 'include'
+                });
                 const data = await response.json();
                 displayHistory(data.history || []);
             } catch (error) {
@@ -730,7 +1286,7 @@
             const historyList = document.getElementById('historyList');
 
             if (!history.length) {
-                historyList.innerHTML = '<div class="history-empty">No summaries yet</div>';
+                historyList.innerHTML = `<div class="history-empty">${currentUser ? 'No summaries yet. Try one!' : 'No summaries yet'}</div>`;
                 return;
             }
 
@@ -750,8 +1306,12 @@
 
         async function clearHistory() {
             try {
-                await fetch(`${API_BASE}/api/clear-history`, { method: 'POST' });
+                await fetch(`${API_BASE}/api/clear-history`, { 
+                    method: 'POST',
+                    credentials: 'include'
+                });
                 loadHistory();
+                if (currentUser) loadUserStats();
             } catch (error) {
                 console.error('Failed to clear history:', error);
             }

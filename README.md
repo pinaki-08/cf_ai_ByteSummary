@@ -1,14 +1,17 @@
 # ByteSummary - AI-Powered Tech Content Summarizer
 
-A modern web application that uses Cloudflare's AI infrastructure to provide instant summaries of any tech article, blog post, or documentation.
+A modern web application that uses Cloudflare's AI infrastructure to provide instant summaries of any tech article, blog post, or documentation. Now with **per-user portal** support!
 
 ![ByteSummary](https://img.shields.io/badge/Powered%20by-Cloudflare%20Workers%20AI-orange)
 
 ## 🚀 Features
 
 - **AI-Powered Summarization**: Uses Llama 3.3 70B on Cloudflare Workers AI
+- **User Authentication**: Register and login to save your personal history
+- **Per-User Portal**: Each user gets their own dashboard with stats
 - **Smart Caching**: Results are cached in KV storage for faster repeat access
-- **History Tracking**: Keep track of your recent summaries
+- **History Tracking**: Keep track of your recent summaries (per-user when logged in)
+- **User Stats**: Track total summaries, weekly activity, and time saved
 - **Beautiful UI**: Modern, responsive design with dark theme
 - **Tech-Focused**: Summaries are optimized for technical content
 
@@ -19,9 +22,9 @@ This application uses the following Cloudflare technologies:
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **LLM** | Workers AI (Llama 3.3 70B) | Content summarization |
-| **Backend** | Cloudflare Workers | API routing and coordination |
-| **Frontend** | Cloudflare Pages | Static site hosting |
-| **State/Memory** | Workers KV | Caching summaries and history |
+| **Backend** | Cloudflare Workers | API routing, auth, and coordination |
+| **Frontend** | Cloudflare Workers (Static Assets) | UI hosting |
+| **State/Memory** | Workers KV | User data, sessions, caching, and history |
 
 ## 📋 Prerequisites
 
