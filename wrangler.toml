@@ -1,0 +1,15 @@
+name = "bytesummary-worker"
+main = "src/worker.js"
+compatibility_date = "2024-01-01"
+assets = { directory = "public" }
+
+[ai]
+binding = "AI"
+
+[[kv_namespaces]]
+binding = "SUMMARIES_CACHE"
+id = "36755232d8ef412c87f295b824010136"
+preview_id = "a91952fd75bc49319615d14b70b520c7"
+
+[vars]
+ENVIRONMENT = "development"

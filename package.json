@@ -1,0 +1,27 @@
+{
+  "name": "cf_ai_bytesummary",
+  "version": "1.0.0",
+  "description": "AI-powered URL summarizer using Cloudflare Workers AI",
+  "main": "src/worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:pages": "wrangler pages deploy public --project-name=bytesummary",
+    "tail": "wrangler tail"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pinaki-08/cf_ai_ByteSummary.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/pinaki-08/cf_ai_ByteSummary/issues"
+  },
+  "homepage": "https://github.com/pinaki-08/cf_ai_ByteSummary#readme",
+  "devDependencies": {
+    "wrangler": "^4.60.0"
+  }
+}
