@@ -1,1347 +1,1536 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ByteSummary - AI-Powered Tech Content Summarizer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --primary: #f97316;
-            --primary-dark: #ea580c;
-            --primary-light: #fed7aa;
-            --bg-dark: #0f0f0f;
-            --bg-card: #1a1a1a;
-            --bg-card-hover: #242424;
-            --text-primary: #ffffff;
-            --text-secondary: #a1a1aa;
-            --text-muted: #71717a;
-            --border: #27272a;
-            --success: #22c55e;
-            --error: #ef4444;
-            --gradient: linear-gradient(135deg, #f97316 0%, #fb923c 50%, #fdba74 100%);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            min-height: 100vh;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Top Navigation */
-        .top-nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 0;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 20px;
-        }
-
-        .nav-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-decoration: none;
-        }
-
-        .nav-brand .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: var(--gradient);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        .nav-brand h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: var(--gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .nav-user {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 16px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 50px;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            background: var(--gradient);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .user-name {
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-
-        .auth-btn {
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-        }
-
-        .auth-btn.primary {
-            background: var(--gradient);
-            color: white;
-        }
-
-        .auth-btn.secondary {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-        }
-
-        .auth-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .auth-btn.secondary:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        /* Header */
-        header {
-            text-align: center;
-            padding: 30px 20px;
-            margin-bottom: 30px;
-        }
-
-        .tagline {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        .powered-by {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 12px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-
-        /* User Stats Card */
-        .user-stats-card {
-            background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(249, 115, 22, 0.05) 100%);
-            border: 1px solid rgba(249, 115, 22, 0.2);
-            border-radius: 16px;
-            padding: 20px 24px;
-            margin-bottom: 30px;
-            display: none;
-        }
-
-        .user-stats-card.visible {
-            display: block;
-        }
-
-        .stats-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .stats-header h3 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 16px;
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: 16px;
-            background: var(--bg-card);
-            border-radius: 12px;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
-        .stat-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        /* Input Section */
-        .input-section {
-            max-width: 800px;
-            margin: 0 auto 40px;
-        }
-
-        .input-wrapper {
-            display: flex;
-            gap: 12px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 8px;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        .input-wrapper:focus-within {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
-        }
-
-        .url-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            padding: 16px 20px;
-            font-size: 1rem;
-            color: var(--text-primary);
-            font-family: 'JetBrains Mono', monospace;
-        }
-
-        .url-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .url-input:focus {
-            outline: none;
-        }
-
-        .submit-btn {
-            background: var(--gradient);
-            border: none;
-            padding: 16px 32px;
-            border-radius: 12px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .submit-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .submit-btn .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Main Content Layout */
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            gap: 24px;
-            align-items: start;
-        }
-
-        @media (max-width: 968px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Summary Section */
-        .summary-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-        }
-
-        .summary-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .summary-header h2 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .cache-badge {
-            background: var(--success);
-            color: white;
-            font-size: 0.7rem;
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-
-        .summary-content {
-            padding: 24px;
-            min-height: 400px;
-        }
-
-        .summary-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 400px;
-            text-align: center;
-            color: var(--text-muted);
-        }
-
-        .summary-placeholder .icon {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        .summary-placeholder p {
-            max-width: 300px;
-        }
-
-        .summary-meta {
-            padding: 16px 24px;
-            background: rgba(249, 115, 22, 0.05);
-            border-top: 1px solid var(--border);
-        }
-
-        .summary-meta .url {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: var(--primary);
-            word-break: break-all;
-        }
-
-        .summary-meta .timestamp {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        /* Markdown Content Styling */
-        .summary-text {
-            line-height: 1.8;
-        }
-
-        .summary-text h1, .summary-text h2, .summary-text h3 {
-            color: var(--primary);
-            margin: 24px 0 12px;
-        }
-
-        .summary-text h1:first-child, .summary-text h2:first-child {
-            margin-top: 0;
-        }
-
-        .summary-text strong {
-            color: var(--primary-light);
-        }
-
-        .summary-text ul, .summary-text ol {
-            margin: 12px 0;
-            padding-left: 24px;
-        }
-
-        .summary-text li {
-            margin: 8px 0;
-        }
-
-        .summary-text code {
-            background: var(--bg-dark);
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9em;
-            color: var(--primary);
-        }
-
-        .summary-text pre {
-            background: var(--bg-dark);
-            padding: 16px;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 16px 0;
-        }
-
-        .summary-text pre code {
-            background: none;
-            padding: 0;
-        }
-
-        .summary-text p {
-            margin: 12px 0;
-        }
-
-        /* History Sidebar */
-        .history-section {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            overflow: hidden;
-            position: sticky;
-            top: 20px;
-        }
-
-        .history-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .history-header h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .clear-btn {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-muted);
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .clear-btn:hover {
-            border-color: var(--error);
-            color: var(--error);
-        }
-
-        .history-list {
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .history-item {
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .history-item:hover {
-            background: var(--bg-card-hover);
-        }
-
-        .history-item:last-child {
-            border-bottom: none;
-        }
-
-        .history-item .title {
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 4px;
-        }
-
-        .history-item .url {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-family: 'JetBrains Mono', monospace;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .history-item .time {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-
-        .history-empty {
-            padding: 40px 20px;
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        /* Error State */
-        .error-message {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--error);
-            color: var(--error);
-            padding: 16px 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .error-message .icon {
-            font-size: 1.5rem;
-        }
-
-        /* Loading Skeleton */
-        .skeleton {
-            background: linear-gradient(90deg, var(--bg-dark) 25%, var(--bg-card-hover) 50%, var(--bg-dark) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: 8px;
-        }
-
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        .skeleton-line {
-            height: 16px;
-            margin: 12px 0;
-        }
-
-        .skeleton-line.short {
-            width: 60%;
-        }
-
-        .skeleton-line.medium {
-            width: 80%;
-        }
-
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s;
-        }
-
-        .modal-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .modal {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 32px;
-            width: 100%;
-            max-width: 420px;
-            transform: translateY(20px);
-            transition: transform 0.3s;
-        }
-
-        .modal-overlay.active .modal {
-            transform: translateY(0);
-        }
-
-        .modal-header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        .modal-header h2 {
-            font-size: 1.5rem;
-            margin-bottom: 8px;
-        }
-
-        .modal-header p {
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .modal-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-        }
-
-        .modal-tab {
-            flex: 1;
-            padding: 12px;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .modal-tab.active {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: white;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 500;
-            margin-bottom: 8px;
-            color: var(--text-secondary);
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 14px 16px;
-            background: var(--bg-dark);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: border-color 0.2s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .form-group input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .modal-submit {
-            width: 100%;
-            padding: 14px;
-            background: var(--gradient);
-            border: none;
-            border-radius: 10px;
-            color: white;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 8px;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .modal-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(249, 115, 22, 0.3);
-        }
-
-        .modal-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 4px;
-            line-height: 1;
-        }
-
-        .modal-close:hover {
-            color: var(--text-primary);
-        }
-
-        .modal-error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--error);
-            color: var(--error);
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            margin-bottom: 16px;
-            display: none;
-        }
-
-        .modal-error.visible {
-            display: block;
-        }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 40px 20px;
-            margin-top: 60px;
-            border-top: 1px solid var(--border);
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
-
-        footer a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* Animations */
-        .fade-in {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Responsive */
-        @media (max-width: 600px) {
-            .top-nav {
-                flex-direction: column;
-                gap: 16px;
-            }
-
-            .nav-user {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .input-wrapper {
-                flex-direction: column;
-            }
-
-            .submit-btn {
-                width: 100%;
-                justify-content: center;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ByteSummary - Tech Blog Aggregator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #f97316;
+      --primary-light: #fb923c;
+      --primary-dark: #ea580c;
+      --primary-glow: rgba(249, 115, 22, 0.3);
+      --accent: #fbbf24;
+      --bg-dark: #0c0a09;
+      --bg-card: #1c1917;
+      --bg-hover: #292524;
+      --text-primary: #fafaf9;
+      --text-secondary: #a8a29e;
+      --text-muted: #78716c;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-dark);
+      min-height: 100vh;
+      color: var(--text-primary);
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 20%, rgba(249, 115, 22, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(251, 191, 36, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(249, 115, 22, 0.05) 0%, transparent 70%);
+      z-index: -1;
+    }
+
+    .header {
+      background: rgba(12, 10, 9, 0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-icon {
+      font-size: 2rem;
+      filter: drop-shadow(0 0 10px var(--primary-glow));
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+
+    .main-container {
+      display: flex;
+      padding-top: 80px;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: 300px;
+      background: rgba(28, 25, 23, 0.8);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid var(--border);
+      padding: 1.5rem;
+      position: fixed;
+      top: 80px;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .sidebar-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--primary);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sidebar-title::before {
+      content: '';
+      width: 3px;
+      height: 12px;
+      background: var(--primary);
+      border-radius: 2px;
+    }
+
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0.7rem 1rem;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .filter-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .filter-btn.active {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(251, 191, 36, 0.1) 100%);
+      color: var(--primary-light);
+      border-color: rgba(249, 115, 22, 0.3);
+    }
+
+    .filter-icon {
+      font-size: 1.1rem;
+    }
+
+    .filter-select {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .filter-select option {
+      background: var(--bg-card);
+    }
+
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.875rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .refresh-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px var(--primary-glow);
+    }
+
+    .refresh-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .refresh-btn.loading .refresh-icon {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .clear-cache-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.75rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .clear-cache-btn:hover {
+      background: var(--bg-hover);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .clear-cache-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Job Status Panel */
+    .job-status {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+
+    .job-status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .job-status-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .job-status-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+
+    .job-status-badge.idle {
+      background: rgba(120, 113, 108, 0.2);
+      color: var(--text-muted);
+    }
+
+    .job-status-badge.running {
+      background: rgba(249, 115, 22, 0.2);
+      color: var(--primary-light);
+      animation: pulse 2s infinite;
+    }
+
+    .job-status-badge.completed {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+
+    .job-status-badge.error {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .job-status-message {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .job-status-sources {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .job-source-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-hover);
+      border-radius: 8px;
+      font-size: 0.75rem;
+    }
+
+    .job-source-name {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .job-source-stats {
+      color: var(--text-muted);
+    }
+
+    .job-source-stats.success {
+      color: #4ade80;
+    }
+
+    .job-progress-bar {
+      height: 4px;
+      background: var(--bg-hover);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 0.75rem;
+    }
+
+    .job-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+
+    .content {
+      flex: 1;
+      margin-left: 300px;
+      padding: 2rem;
+    }
+
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .content-title {
+      font-size: 2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .blog-count {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      background: var(--bg-card);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .blog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .blog-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .blog-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .blog-card:hover {
+      border-color: rgba(249, 115, 22, 0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 30px var(--primary-glow);
+    }
+
+    .blog-card:hover::before {
+      opacity: 1;
+    }
+
+    .blog-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .source-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      background: var(--bg-hover);
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .source-badge.meta {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+    }
+
+    .source-badge.uber {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .source-badge.cloudflare {
+      background: rgba(246, 130, 31, 0.15);
+      color: #f6821f;
+    }
+
+    .source-badge.microsoft {
+      background: rgba(0, 120, 212, 0.15);
+      color: #4ea8de;
+    }
+
+    .category-badge {
+      padding: 0.35rem 0.75rem;
+      background: rgba(249, 115, 22, 0.15);
+      border-radius: 50px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--primary-light);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .blog-card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 0.75rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .blog-card-summary {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .blog-card-tech {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+    }
+
+    .tech-label {
+      padding: 0.25rem 0.6rem;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+    }
+
+    .tech-label:hover {
+      border-color: var(--primary);
+      color: var(--primary-light);
+    }
+
+    .tech-more {
+      background: rgba(249, 115, 22, 0.1);
+      border-color: rgba(249, 115, 22, 0.2);
+      color: var(--primary-light);
+    }
+
+    .blog-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .read-more {
+      color: var(--primary);
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: var(--text-secondary);
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      filter: grayscale(0.5);
+    }
+
+    .empty-state-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow-y: auto;
+      transform: scale(0.9) translateY(20px);
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-header {
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      background: linear-gradient(180deg, rgba(249, 115, 22, 0.1) 0%, transparent 100%);
+    }
+
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+
+    .modal-close {
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      color: var(--text-secondary);
+      font-size: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .modal-close:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .modal-body {
+      padding: 2rem;
+    }
+
+    .modal-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .modal-section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--primary);
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .modal-summary {
+      color: var(--text-secondary);
+      line-height: 1.8;
+      font-size: 0.95rem;
+    }
+
+    .key-points {
+      list-style: none;
+    }
+
+    .key-points li {
+      padding: 0.75rem 0;
+      padding-left: 1.75rem;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .key-points li:last-child {
+      border-bottom: none;
+    }
+
+    .key-points li::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .tech-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .tech-tag {
+      padding: 0.4rem 0.85rem;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .modal-footer {
+      padding: 1.5rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--bg-hover);
+    }
+
+    .view-original-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1.5rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .view-original-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px var(--primary-glow);
+    }
+
+    .auth-modal .modal {
+      max-width: 420px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 1rem;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .auth-tab.active {
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+    }
+
+    .auth-form {
+      padding: 2rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .form-submit {
+      width: 100%;
+      padding: 1rem;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .form-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px var(--primary-glow);
+    }
+
+    .form-error {
+      color: #f87171;
+      font-size: 0.8rem;
+      margin-top: 0.5rem;
+    }
+
+    .auth-btn {
+      padding: 0.5rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .auth-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .loading-spinner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem;
+      color: var(--text-secondary);
+    }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid var(--bg-hover);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        display: none;
+      }
+      .content {
+        margin-left: 0;
+      }
+      .blog-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Top Navigation -->
-        <nav class="top-nav">
-            <a href="/" class="nav-brand">
-                <div class="logo-icon">📄</div>
-                <h1>ByteSummary</h1>
-            </a>
-            <div class="nav-user" id="navUser">
-                <!-- Guest State -->
-                <div id="guestNav">
-                    <button class="auth-btn secondary" onclick="showAuthModal('login')">Log In</button>
-                    <button class="auth-btn primary" onclick="showAuthModal('register')">Sign Up</button>
-                </div>
-                <!-- Logged In State -->
-                <div id="userNav" style="display: none;">
-                    <div class="user-info">
-                        <div class="user-avatar" id="userAvatar">U</div>
-                        <span class="user-name" id="userName">User</span>
-                    </div>
-                    <button class="auth-btn secondary" onclick="logout()">Log Out</button>
-                </div>
-            </div>
-        </nav>
-
-        <header>
-            <p class="tagline">Get instant AI-powered summaries of any tech article, blog post, or documentation</p>
-            <div class="powered-by">
-                <span>Powered by</span>
-                <strong>Cloudflare Workers AI (Llama 3.3)</strong>
-                <span>⚡</span>
-            </div>
-        </header>
-
-        <!-- User Stats Card -->
-        <div class="user-stats-card" id="userStatsCard">
-            <div class="stats-header">
-                <h3>👋 Welcome back, <span id="statsUserName">User</span>!</h3>
-            </div>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-value" id="statsTotalSummaries">0</div>
-                    <div class="stat-label">Total Summaries</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="statsThisWeek">0</div>
-                    <div class="stat-label">This Week</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="statsSavedTime">0</div>
-                    <div class="stat-label">Minutes Saved</div>
-                </div>
-            </div>
-        </div>
-
-        <section class="input-section">
-            <div class="input-wrapper">
-                <input 
-                    type="url" 
-                    class="url-input" 
-                    id="urlInput" 
-                    placeholder="https://example.com/article-to-summarize"
-                    autocomplete="off"
-                >
-                <button class="submit-btn" id="submitBtn" onclick="summarizeUrl()">
-                    <span class="btn-text">Summarize</span>
-                    <span class="btn-icon">→</span>
-                </button>
-            </div>
-            <div id="errorContainer"></div>
-        </section>
-
-        <main class="main-content">
-            <section class="summary-section">
-                <div class="summary-header">
-                    <h2>
-                        <span>📝</span>
-                        Summary
-                    </h2>
-                    <span class="cache-badge" id="cacheBadge" style="display: none;">From Cache</span>
-                </div>
-                <div class="summary-content" id="summaryContent">
-                    <div class="summary-placeholder">
-                        <div class="icon">🔗</div>
-                        <p>Enter a URL above to get an AI-powered summary of the content</p>
-                    </div>
-                </div>
-                <div class="summary-meta" id="summaryMeta" style="display: none;">
-                    <div class="url" id="summaryUrl"></div>
-                    <div class="timestamp" id="summaryTimestamp"></div>
-                </div>
-            </section>
-
-            <aside class="history-section">
-                <div class="history-header">
-                    <h3>
-                        <span>🕐</span>
-                        <span id="historyTitle">Recent</span>
-                    </h3>
-                    <button class="clear-btn" onclick="clearHistory()">Clear</button>
-                </div>
-                <div class="history-list" id="historyList">
-                    <div class="history-empty">No summaries yet</div>
-                </div>
-            </aside>
-        </main>
-
-        <footer>
-            <p>Built with ❤️ using <a href="https://developers.cloudflare.com/workers-ai/" target="_blank">Cloudflare Workers AI</a>, <a href="https://developers.cloudflare.com/workers/" target="_blank">Workers</a>, and <a href="https://developers.cloudflare.com/kv/" target="_blank">KV Storage</a></p>
-        </footer>
+  <header class="header">
+    <div class="logo">
+      <span class="logo-icon">🔥</span>
+      <span>ByteSummary</span>
     </div>
-
-    <!-- Auth Modal -->
-    <div class="modal-overlay" id="authModal">
-        <div class="modal" style="position: relative;">
-            <button class="modal-close" onclick="hideAuthModal()">&times;</button>
-            <div class="modal-header">
-                <h2 id="modalTitle">Welcome</h2>
-                <p id="modalSubtitle">Sign in to save your summaries</p>
-            </div>
-            <div class="modal-tabs">
-                <button class="modal-tab active" id="loginTab" onclick="switchTab('login')">Log In</button>
-                <button class="modal-tab" id="registerTab" onclick="switchTab('register')">Sign Up</button>
-            </div>
-            <div class="modal-error" id="modalError"></div>
-            <form id="authForm" onsubmit="handleAuthSubmit(event)">
-                <div class="form-group" id="nameGroup" style="display: none;">
-                    <label for="authName">Name</label>
-                    <input type="text" id="authName" placeholder="Your name">
-                </div>
-                <div class="form-group">
-                    <label for="authEmail">Email</label>
-                    <input type="email" id="authEmail" placeholder="you@example.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="authPassword">Password</label>
-                    <input type="password" id="authPassword" placeholder="••••••••" required minlength="6">
-                </div>
-                <button type="submit" class="modal-submit" id="authSubmitBtn">Log In</button>
-            </form>
-        </div>
+    <div class="header-right">
+      <div id="auth-section">
+        <button class="auth-btn" onclick="showAuthModal()">Sign In</button>
+      </div>
     </div>
+  </header>
 
-    <script>
-        // State
-        let currentUser = null;
-        let authMode = 'login';
+  <div class="main-container">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Sources</h3>
+        <div id="source-filters">
+          <button class="filter-btn active" data-source="all" onclick="setSourceFilter('all')">
+            <span class="filter-icon">📚</span>
+            <span>All Sources</span>
+          </button>
+          <button class="filter-btn" data-source="meta" onclick="setSourceFilter('meta')">
+            <span class="filter-icon">🔵</span>
+            <span>Meta Engineering</span>
+          </button>
+          <button class="filter-btn" data-source="uber" onclick="setSourceFilter('uber')">
+            <span class="filter-icon">⚫</span>
+            <span>Uber Engineering</span>
+          </button>
+          <button class="filter-btn" data-source="cloudflare" onclick="setSourceFilter('cloudflare')">
+            <span class="filter-icon">🟠</span>
+            <span>Cloudflare Engineering</span>
+          </button>
+          <button class="filter-btn" data-source="microsoft" onclick="setSourceFilter('microsoft')">
+            <span class="filter-icon">🟦</span>
+            <span>Microsoft DevBlogs</span>
+          </button>
+        </div>
+      </div>
 
-        // API Configuration
-        const API_BASE = '';
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Categories</h3>
+        <div id="category-filters">
+          <button class="filter-btn active" data-category="all" onclick="setCategoryFilter('all')">
+            <span class="filter-icon">📚</span>
+            <span>All Topics</span>
+          </button>
+          <button class="filter-btn" data-category="ml" onclick="setCategoryFilter('ml')">
+            <span class="filter-icon">🤖</span>
+            <span>Machine Learning</span>
+          </button>
+          <button class="filter-btn" data-category="engineering" onclick="setCategoryFilter('engineering')">
+            <span class="filter-icon">⚙️</span>
+            <span>Engineering</span>
+          </button>
+          <button class="filter-btn" data-category="infrastructure" onclick="setCategoryFilter('infrastructure')">
+            <span class="filter-icon">🏗️</span>
+            <span>Infrastructure</span>
+          </button>
+          <button class="filter-btn" data-category="data" onclick="setCategoryFilter('data')">
+            <span class="filter-icon">📊</span>
+            <span>Data</span>
+          </button>
+          <button class="filter-btn" data-category="mobile" onclick="setCategoryFilter('mobile')">
+            <span class="filter-icon">📱</span>
+            <span>Mobile</span>
+          </button>
+          <button class="filter-btn" data-category="web" onclick="setCategoryFilter('web')">
+            <span class="filter-icon">🌐</span>
+            <span>Web</span>
+          </button>
+        </div>
+      </div>
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', async () => {
-            await checkAuth();
-            loadHistory();
-            
-            document.getElementById('urlInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    summarizeUrl();
-                }
-            });
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Timeframe</h3>
+        <select class="filter-select" id="days-filter" onchange="setDaysFilter(this.value)">
+          <option value="7" selected>Last 7 days</option>
+          <option value="14">Last 14 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
 
-            // Close modal on overlay click
-            document.getElementById('authModal').addEventListener('click', (e) => {
-                if (e.target.id === 'authModal') {
-                    hideAuthModal();
-                }
-            });
+      <button class="refresh-btn" id="refresh-btn" onclick="refreshBlogs()">
+        <span class="refresh-icon">🔄</span>
+        <span>Fetch Latest Blogs</span>
+      </button>
+
+      <button class="clear-cache-btn" id="clear-cache-btn" onclick="clearCache()">
+        <span>🗑️</span>
+        <span>Clear Cache</span>
+      </button>
+
+      <!-- Job Status Panel -->
+      <div class="job-status" id="job-status">
+        <div class="job-status-header">
+          <span class="job-status-title">Fetch Status</span>
+          <span class="job-status-badge idle" id="job-badge">Idle</span>
+        </div>
+        <div class="job-status-message" id="job-message">Click "Fetch Latest Blogs" to start</div>
+        <div class="job-status-sources" id="job-sources"></div>
+        <div class="job-progress-bar" id="job-progress-bar" style="display: none;">
+          <div class="job-progress-fill" id="job-progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="content-header">
+        <h1 class="content-title">Tech Blog Summaries</h1>
+        <span class="blog-count" id="blog-count">Loading...</span>
+      </div>
+
+      <div id="blog-container">
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <span>Loading blog summaries...</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="blog-modal" onclick="closeBlogModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title"></h2>
+        <button class="modal-close" onclick="closeBlogModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-meta" id="modal-meta"></div>
+        <div class="modal-section">
+          <h3 class="modal-section-title">📝 Summary</h3>
+          <p class="modal-summary" id="modal-summary"></p>
+        </div>
+        <div class="modal-section">
+          <h3 class="modal-section-title">🎯 Key Points</h3>
+          <ul class="key-points" id="modal-key-points"></ul>
+        </div>
+        <div class="modal-section" id="modal-tech-section">
+          <h3 class="modal-section-title">🛠️ Technologies</h3>
+          <div class="tech-tags" id="modal-technologies"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <a class="view-original-btn" id="modal-link" href="#" target="_blank" rel="noopener">
+          View Original Article →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay auth-modal" id="auth-modal" onclick="closeAuthModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="login-tab" onclick="showLoginForm()">Sign In</button>
+        <button class="auth-tab" id="register-tab" onclick="showRegisterForm()">Create Account</button>
+      </div>
+      <form class="auth-form" id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label class="form-label" for="login-email">Email</label>
+          <input type="email" class="form-input" id="login-email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-password">Password</label>
+          <input type="password" class="form-input" id="login-password" required>
+        </div>
+        <div class="form-error" id="login-error"></div>
+        <button type="submit" class="form-submit">Sign In</button>
+      </form>
+      <form class="auth-form" id="register-form" style="display: none;" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label class="form-label" for="register-name">Name</label>
+          <input type="text" class="form-input" id="register-name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="register-email">Email</label>
+          <input type="email" class="form-input" id="register-email" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="register-password">Password</label>
+          <input type="password" class="form-input" id="register-password" required minlength="6">
+        </div>
+        <div class="form-error" id="register-error"></div>
+        <button type="submit" class="form-submit">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let currentSource = 'all';
+    let currentCategory = 'all';
+    let currentDays = 7;
+    let blogs = [];
+    let jobPollInterval = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAuth();
+      loadBlogs();
+      loadJobStatus();
+    });
+
+    // Job Status Functions
+    async function loadJobStatus() {
+      try {
+        const res = await fetch('/api/job-status');
+        const data = await res.json();
+        updateJobStatusUI(data);
+      } catch (err) {
+        console.error('Failed to load job status:', err);
+      }
+    }
+
+    function updateJobStatusUI(data) {
+      const badge = document.getElementById('job-badge');
+      const message = document.getElementById('job-message');
+      const sources = document.getElementById('job-sources');
+      const progressBar = document.getElementById('job-progress-bar');
+      const progressFill = document.getElementById('job-progress-fill');
+
+      // Update badge
+      badge.className = `job-status-badge ${data.status}`;
+      badge.textContent = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+
+      // Update message
+      message.textContent = data.message || 'No recent activity';
+
+      // Update sources
+      if (data.sources && Object.keys(data.sources).length > 0) {
+        const sourceNames = {
+          meta: { name: 'Meta', logo: '🔵' },
+          uber: { name: 'Uber', logo: '⚫' },
+          cloudflare: { name: 'Cloudflare', logo: '🟠' },
+          microsoft: { name: 'Microsoft', logo: '🟦' }
+        };
+        sources.innerHTML = Object.entries(data.sources).map(([id, info]) => {
+          const source = sourceNames[id] || { name: id, logo: '📝' };
+          return `
+            <div class="job-source-item">
+              <span class="job-source-name">
+                <span>${source.logo}</span>
+                <span>${source.name}</span>
+              </span>
+              <span class="job-source-stats ${info.status === 'completed' ? 'success' : ''}">
+                ${info.status === 'completed' ? `✓ ${info.processed}/${info.articles}` : 
+                  info.status === 'error' ? '✗ Error' : 
+                  info.status === 'processing' ? `⏳ ${info.processed}/${info.articles}` : 
+                  '⏳ Fetching...'}
+              </span>
+            </div>
+          `;
+        }).join('');
+      } else {
+        sources.innerHTML = '';
+      }
+
+      // Update progress bar
+      if (data.status === 'running' && data.totalArticles > 0) {
+        progressBar.style.display = 'block';
+        const percent = Math.round((data.processedArticles / data.totalArticles) * 100);
+        progressFill.style.width = `${percent}%`;
+      } else {
+        progressBar.style.display = 'none';
+      }
+
+      // Auto-poll if running
+      if (data.status === 'running') {
+        if (!jobPollInterval) {
+          jobPollInterval = setInterval(loadJobStatus, 2000);
+        }
+      } else {
+        if (jobPollInterval) {
+          clearInterval(jobPollInterval);
+          jobPollInterval = null;
+          // Reload blogs when job completes
+          if (data.status === 'completed') {
+            setTimeout(loadBlogs, 1000);
+          }
+        }
+      }
+    }
+
+    // Auth Functions
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (data.user) {
+          currentUser = data.user;
+          updateAuthUI();
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      }
+    }
+
+    function updateAuthUI() {
+      const authSection = document.getElementById('auth-section');
+      if (currentUser) {
+        authSection.innerHTML = `
+          <div class="user-info">
+            <div class="user-avatar">${currentUser.name.charAt(0).toUpperCase()}</div>
+            <span>${currentUser.name}</span>
+          </div>
+          <button class="auth-btn" onclick="handleLogout()">Sign Out</button>
+        `;
+      } else {
+        authSection.innerHTML = `<button class="auth-btn" onclick="showAuthModal()">Sign In</button>`;
+      }
+    }
+
+    function showAuthModal() {
+      document.getElementById('auth-modal').classList.add('active');
+    }
+
+    function closeAuthModal(event) {
+      if (!event || event.target === event.currentTarget) {
+        document.getElementById('auth-modal').classList.remove('active');
+        document.getElementById('login-error').textContent = '';
+        document.getElementById('register-error').textContent = '';
+      }
+    }
+
+    function showLoginForm() {
+      document.getElementById('login-tab').classList.add('active');
+      document.getElementById('register-tab').classList.remove('active');
+      document.getElementById('login-form').style.display = 'block';
+      document.getElementById('register-form').style.display = 'none';
+    }
+
+    function showRegisterForm() {
+      document.getElementById('register-tab').classList.add('active');
+      document.getElementById('login-tab').classList.remove('active');
+      document.getElementById('register-form').style.display = 'block';
+      document.getElementById('login-form').style.display = 'none';
+    }
+
+    async function handleLogin(event) {
+      event.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const errorEl = document.getElementById('login-error');
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
         });
-
-        // ==================== AUTH FUNCTIONS ====================
-
-        async function checkAuth() {
-            try {
-                const response = await fetch(`${API_BASE}/api/auth/me`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-                
-                if (data.user) {
-                    currentUser = data.user;
-                    updateUIForUser();
-                    loadUserStats();
-                }
-            } catch (error) {
-                console.error('Auth check failed:', error);
-            }
+        const data = await res.json();
+        if (data.error) {
+          errorEl.textContent = data.error;
+        } else {
+          currentUser = data.user;
+          updateAuthUI();
+          closeAuthModal();
         }
+      } catch (err) {
+        errorEl.textContent = 'Login failed. Please try again.';
+      }
+    }
 
-        function updateUIForUser() {
-            const guestNav = document.getElementById('guestNav');
-            const userNav = document.getElementById('userNav');
-            const userAvatar = document.getElementById('userAvatar');
-            const userName = document.getElementById('userName');
-            const userStatsCard = document.getElementById('userStatsCard');
-            const statsUserName = document.getElementById('statsUserName');
-            const historyTitle = document.getElementById('historyTitle');
-
-            if (currentUser) {
-                guestNav.style.display = 'none';
-                userNav.style.display = 'flex';
-                userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
-                userName.textContent = currentUser.name;
-                userStatsCard.classList.add('visible');
-                statsUserName.textContent = currentUser.name;
-                historyTitle.textContent = 'Your History';
-            } else {
-                guestNav.style.display = 'flex';
-                userNav.style.display = 'none';
-                userStatsCard.classList.remove('visible');
-                historyTitle.textContent = 'Recent';
-            }
+    async function handleRegister(event) {
+      event.preventDefault();
+      const name = document.getElementById('register-name').value;
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
+      const errorEl = document.getElementById('register-error');
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+        const data = await res.json();
+        if (data.error) {
+          errorEl.textContent = data.error;
+        } else {
+          currentUser = data.user;
+          updateAuthUI();
+          closeAuthModal();
         }
+      } catch (err) {
+        errorEl.textContent = 'Registration failed. Please try again.';
+      }
+    }
 
-        async function loadUserStats() {
-            if (!currentUser) return;
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        currentUser = null;
+        updateAuthUI();
+      } catch (err) {
+        console.error('Logout failed:', err);
+      }
+    }
 
-            try {
-                const response = await fetch(`${API_BASE}/api/user/stats`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
+    // Blog Functions
+    async function loadBlogs() {
+      const container = document.getElementById('blog-container');
+      container.innerHTML = `
+        <div class="loading-spinner">
+          <div class="spinner"></div>
+          <span>Loading blog summaries...</span>
+        </div>
+      `;
+      try {
+        const params = new URLSearchParams({
+          source: currentSource,
+          category: currentCategory,
+          days: currentDays
+        });
+        const res = await fetch(`/api/blogs?${params}`);
+        const data = await res.json();
+        blogs = data.blogs || [];
+        renderBlogs();
+      } catch (err) {
+        console.error('Failed to load blogs:', err);
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">❌</div>
+            <h3 class="empty-state-title">Failed to load blogs</h3>
+            <p>Please try refreshing the page.</p>
+          </div>
+        `;
+      }
+    }
 
-                document.getElementById('statsTotalSummaries').textContent = data.totalSummaries || 0;
-                
-                // Calculate this week's summaries
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                const thisWeek = (data.recentActivity || []).filter(item => 
-                    new Date(item.timestamp) > oneWeekAgo
-                ).length;
-                document.getElementById('statsThisWeek').textContent = thisWeek;
-
-                // Estimate time saved (5 min per article)
-                document.getElementById('statsSavedTime').textContent = (data.totalSummaries || 0) * 5;
-            } catch (error) {
-                console.error('Failed to load stats:', error);
-            }
-        }
-
-        function showAuthModal(mode = 'login') {
-            authMode = mode;
-            switchTab(mode);
-            document.getElementById('authModal').classList.add('active');
-            document.getElementById('authEmail').focus();
-        }
-
-        function hideAuthModal() {
-            document.getElementById('authModal').classList.remove('active');
-            document.getElementById('modalError').classList.remove('visible');
-            document.getElementById('authForm').reset();
-        }
-
-        function switchTab(mode) {
-            authMode = mode;
-            const loginTab = document.getElementById('loginTab');
-            const registerTab = document.getElementById('registerTab');
-            const nameGroup = document.getElementById('nameGroup');
-            const submitBtn = document.getElementById('authSubmitBtn');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalSubtitle = document.getElementById('modalSubtitle');
-
-            if (mode === 'login') {
-                loginTab.classList.add('active');
-                registerTab.classList.remove('active');
-                nameGroup.style.display = 'none';
-                submitBtn.textContent = 'Log In';
-                modalTitle.textContent = 'Welcome Back';
-                modalSubtitle.textContent = 'Sign in to access your summaries';
-            } else {
-                loginTab.classList.remove('active');
-                registerTab.classList.add('active');
-                nameGroup.style.display = 'block';
-                submitBtn.textContent = 'Create Account';
-                modalTitle.textContent = 'Get Started';
-                modalSubtitle.textContent = 'Create an account to save your summaries';
-            }
-
-            document.getElementById('modalError').classList.remove('visible');
-        }
-
-        async function handleAuthSubmit(event) {
-            event.preventDefault();
-            
-            const submitBtn = document.getElementById('authSubmitBtn');
-            const errorEl = document.getElementById('modalError');
-            
-            const email = document.getElementById('authEmail').value;
-            const password = document.getElementById('authPassword').value;
-            const name = document.getElementById('authName').value;
-
-            submitBtn.disabled = true;
-            submitBtn.textContent = authMode === 'login' ? 'Logging in...' : 'Creating account...';
-            errorEl.classList.remove('visible');
-
-            try {
-                const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
-                const body = authMode === 'login' 
-                    ? { email, password }
-                    : { email, password, name };
-
-                const response = await fetch(`${API_BASE}${endpoint}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify(body)
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Authentication failed');
-                }
-
-                currentUser = data.user;
-                updateUIForUser();
-                loadHistory();
-                loadUserStats();
-                hideAuthModal();
-            } catch (error) {
-                errorEl.textContent = error.message;
-                errorEl.classList.add('visible');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = authMode === 'login' ? 'Log In' : 'Create Account';
-            }
-        }
-
-        async function logout() {
-            try {
-                await fetch(`${API_BASE}/api/auth/logout`, {
-                    method: 'POST',
-                    credentials: 'include'
-                });
-                
-                currentUser = null;
-                updateUIForUser();
-                loadHistory();
-            } catch (error) {
-                console.error('Logout failed:', error);
-            }
-        }
-
-        // ==================== SUMMARY FUNCTIONS ====================
-
-        async function summarizeUrl() {
-            const urlInput = document.getElementById('urlInput');
-            const submitBtn = document.getElementById('submitBtn');
-            const errorContainer = document.getElementById('errorContainer');
-            const url = urlInput.value.trim();
-
-            errorContainer.innerHTML = '';
-
-            if (!url) {
-                showError('Please enter a URL');
-                return;
-            }
-
-            try {
-                new URL(url);
-            } catch {
-                showError('Please enter a valid URL (including https://)');
-                return;
-            }
-
-            setLoading(true);
-
-            try {
-                const response = await fetch(`${API_BASE}/api/summarize`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ url }),
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to summarize');
-                }
-
-                displaySummary(data);
-                loadHistory();
-                if (currentUser) loadUserStats();
-            } catch (error) {
-                showError(error.message);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        function setLoading(loading) {
-            const submitBtn = document.getElementById('submitBtn');
-            const summaryContent = document.getElementById('summaryContent');
-
-            if (loading) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<div class="spinner"></div><span>Analyzing...</span>';
-                
-                summaryContent.innerHTML = `
-                    <div class="skeleton skeleton-line short"></div>
-                    <div class="skeleton skeleton-line"></div>
-                    <div class="skeleton skeleton-line medium"></div>
-                    <div class="skeleton skeleton-line"></div>
-                    <div class="skeleton skeleton-line short"></div>
-                    <div class="skeleton skeleton-line medium"></div>
-                    <div class="skeleton skeleton-line"></div>
-                    <div class="skeleton skeleton-line short"></div>
-                `;
-            } else {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span class="btn-text">Summarize</span><span class="btn-icon">→</span>';
-            }
-        }
-
-        function displaySummary(data) {
-            const summaryContent = document.getElementById('summaryContent');
-            const summaryMeta = document.getElementById('summaryMeta');
-            const summaryUrl = document.getElementById('summaryUrl');
-            const summaryTimestamp = document.getElementById('summaryTimestamp');
-            const cacheBadge = document.getElementById('cacheBadge');
-
-            const htmlContent = markdownToHtml(data.summary);
-
-            summaryContent.innerHTML = `
-                <div class="summary-text fade-in">
-                    <h2>${escapeHtml(data.title)}</h2>
-                    ${htmlContent}
+    function renderBlogs() {
+      const container = document.getElementById('blog-container');
+      const countEl = document.getElementById('blog-count');
+      if (blogs.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h3 class="empty-state-title">No blog summaries yet</h3>
+            <p>Click "Fetch Latest Blogs" to start aggregating tech blog posts.</p>
+          </div>
+        `;
+        countEl.textContent = '0 articles';
+        return;
+      }
+      countEl.textContent = `${blogs.length} article${blogs.length !== 1 ? 's' : ''}`;
+      container.innerHTML = `
+        <div class="blog-grid">
+          ${blogs.map(blog => `
+            <article class="blog-card" onclick="openBlogModal('${blog.id}')">
+              <div class="blog-card-header">
+                <span class="source-badge ${blog.source}">
+                  <span>${blog.sourceLogo}</span>
+                  <span>${blog.sourceName}</span>
+                </span>
+                <span class="category-badge">${blog.category}</span>
+              </div>
+              <h3 class="blog-card-title">${escapeHtml(blog.title)}</h3>
+              <p class="blog-card-summary">${escapeHtml(getSummaryText(blog.summary))}</p>
+              ${blog.technologies && blog.technologies.length > 0 ? `
+                <div class="blog-card-tech">
+                  ${blog.technologies.slice(0, 4).map(tech => `<span class="tech-label">${escapeHtml(tech)}</span>`).join('')}
+                  ${blog.technologies.length > 4 ? `<span class="tech-label tech-more">+${blog.technologies.length - 4}</span>` : ''}
                 </div>
-            `;
+              ` : ''}
+              <div class="blog-card-footer">
+                <span>${formatDate(blog.fetchedAt)}</span>
+                <span class="read-more">Read summary →</span>
+              </div>
+            </article>
+          `).join('')}
+        </div>
+      `;
+    }
 
-            summaryUrl.textContent = data.url;
-            summaryTimestamp.textContent = `Summarized ${formatDate(data.timestamp)}`;
-            summaryMeta.style.display = 'block';
-
-            cacheBadge.style.display = data.fromCache ? 'inline-block' : 'none';
+    async function openBlogModal(blogId) {
+      const modal = document.getElementById('blog-modal');
+      try {
+        const res = await fetch(`/api/blogs/${blogId}`);
+        const data = await res.json();
+        if (data.error) {
+          alert('Failed to load blog details');
+          return;
         }
-
-        function markdownToHtml(markdown) {
-            return markdown
-                .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-                .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-                .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-                .replace(/`([^`]+)`/g, '<code>$1</code>')
-                .replace(/^\s*[-*]\s+(.*$)/gm, '<li>$1</li>')
-                .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-                .replace(/^\s*\d+\.\s+(.*$)/gm, '<li>$1</li>')
-                .replace(/\n\n/g, '</p><p>')
-                .replace(/^(?!<[hulo])/gm, '<p>')
-                .replace(/(?<![>])$/gm, '</p>')
-                .replace(/<p><\/p>/g, '')
-                .replace(/<p>(<[hulo])/g, '$1')
-                .replace(/(<\/[hulo].*>)<\/p>/g, '$1');
+        const blog = data.blog;
+        document.getElementById('modal-title').textContent = blog.title;
+        document.getElementById('modal-meta').innerHTML = `
+          <span class="source-badge ${blog.source}">
+            <span>${blog.sourceLogo}</span>
+            <span>${blog.sourceName}</span>
+          </span>
+          <span class="category-badge">${blog.category}</span>
+          <span style="color: var(--text-muted); font-size: 0.85rem;">${formatDate(blog.fetchedAt)}</span>
+        `;
+        document.getElementById('modal-summary').textContent = getSummaryText(blog.fullSummary || blog.summary);
+        const keyPointsList = document.getElementById('modal-key-points');
+        keyPointsList.innerHTML = (blog.keyPoints || []).map(point => 
+          `<li>${escapeHtml(point)}</li>`
+        ).join('');
+        const techSection = document.getElementById('modal-tech-section');
+        const techTags = document.getElementById('modal-technologies');
+        if (blog.technologies && blog.technologies.length > 0) {
+          techSection.style.display = 'block';
+          techTags.innerHTML = blog.technologies.map(tech => 
+            `<span class="tech-tag">${escapeHtml(tech)}</span>`
+          ).join('');
+        } else {
+          techSection.style.display = 'none';
         }
+        document.getElementById('modal-link').href = blog.url;
+        modal.classList.add('active');
+      } catch (err) {
+        console.error('Failed to load blog details:', err);
+        alert('Failed to load blog details');
+      }
+    }
 
-        function showError(message) {
-            const errorContainer = document.getElementById('errorContainer');
-            errorContainer.innerHTML = `
-                <div class="error-message fade-in">
-                    <span class="icon">⚠️</span>
-                    <span>${escapeHtml(message)}</span>
-                </div>
-            `;
+    function closeBlogModal(event) {
+      if (!event || event.target === event.currentTarget) {
+        document.getElementById('blog-modal').classList.remove('active');
+      }
+    }
+
+    async function refreshBlogs() {
+      const btn = document.getElementById('refresh-btn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      btn.innerHTML = '<span class="refresh-icon">🔄</span><span>Starting...</span>';
+
+      try {
+        const res = await fetch('/api/refresh', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          btn.innerHTML = '<span class="refresh-icon">🔄</span><span>Fetching...</span>';
+          // Start polling job status
+          setTimeout(loadJobStatus, 500);
         }
+      } catch (err) {
+        console.error('Refresh failed:', err);
+        alert('Failed to start blog refresh');
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        btn.innerHTML = '<span class="refresh-icon">🔄</span><span>Fetch Latest Blogs</span>';
+      }
 
-        async function loadHistory() {
-            try {
-                const response = await fetch(`${API_BASE}/api/history`, {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-                displayHistory(data.history || []);
-            } catch (error) {
-                console.error('Failed to load history:', error);
-            }
+      // Re-enable button after delay
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        btn.innerHTML = '<span class="refresh-icon">🔄</span><span>Fetch Latest Blogs</span>';
+      }, 5000);
+    }
+
+    async function clearCache() {
+      if (!confirm('Are you sure you want to clear all cached blog summaries? You will need to fetch blogs again.')) {
+        return;
+      }
+      
+      const btn = document.getElementById('clear-cache-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span><span>Clearing...</span>';
+
+      try {
+        const res = await fetch('/api/clear-cache', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          blogs = [];
+          renderBlogs();
+          alert('Cache cleared successfully! Click "Fetch Latest Blogs" to fetch new summaries.');
+        } else {
+          alert('Failed to clear cache: ' + (data.error || 'Unknown error'));
         }
+      } catch (err) {
+        console.error('Clear cache failed:', err);
+        alert('Failed to clear cache');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🗑️</span><span>Clear Cache</span>';
+      }
+    }
 
-        function displayHistory(history) {
-            const historyList = document.getElementById('historyList');
+    function setSourceFilter(source) {
+      currentSource = source;
+      document.querySelectorAll('#source-filters .filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.source === source);
+      });
+      loadBlogs();
+    }
 
-            if (!history.length) {
-                historyList.innerHTML = `<div class="history-empty">${currentUser ? 'No summaries yet. Try one!' : 'No summaries yet'}</div>`;
-                return;
-            }
+    function setCategoryFilter(category) {
+      currentCategory = category;
+      document.querySelectorAll('#category-filters .filter-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.category === category);
+      });
+      loadBlogs();
+    }
 
-            historyList.innerHTML = history.map(item => `
-                <div class="history-item" onclick="loadFromHistory('${escapeHtml(item.url)}')">
-                    <div class="title">${escapeHtml(item.title)}</div>
-                    <div class="url">${escapeHtml(truncateUrl(item.url))}</div>
-                    <div class="time">${formatDate(item.timestamp)}</div>
-                </div>
-            `).join('');
+    function setDaysFilter(days) {
+      currentDays = parseInt(days);
+      loadBlogs();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Helper to extract summary text from potentially malformed data
+    function getSummaryText(summary) {
+      if (!summary) return 'No summary available';
+      // If summary looks like JSON, try to extract brief
+      if (typeof summary === 'string' && summary.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(summary);
+          return parsed.brief || parsed.detailed || summary;
+        } catch (e) {
+          // Try to extract brief with regex
+          const match = summary.match(/"brief"\s*:\s*"([^"]+)"/);
+          if (match) return match[1];
         }
+      }
+      return summary;
+    }
 
-        function loadFromHistory(url) {
-            document.getElementById('urlInput').value = url;
-            summarizeUrl();
-        }
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return 'Today';
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays < 7) return `${diffDays} days ago`;
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
 
-        async function clearHistory() {
-            try {
-                await fetch(`${API_BASE}/api/clear-history`, { 
-                    method: 'POST',
-                    credentials: 'include'
-                });
-                loadHistory();
-                if (currentUser) loadUserStats();
-            } catch (error) {
-                console.error('Failed to clear history:', error);
-            }
-        }
-
-        function truncateUrl(url) {
-            try {
-                const parsed = new URL(url);
-                return parsed.hostname + (parsed.pathname.length > 30 ? parsed.pathname.slice(0, 30) + '...' : parsed.pathname);
-            } catch {
-                return url.slice(0, 40) + '...';
-            }
-        }
-
-        function formatDate(timestamp) {
-            const date = new Date(timestamp);
-            const now = new Date();
-            const diff = now - date;
-
-            if (diff < 60000) return 'just now';
-            if (diff < 3600000) return `${Math.floor(diff / 60000)} min ago`;
-            if (diff < 86400000) return `${Math.floor(diff / 3600000)} hours ago`;
-            return date.toLocaleDateString();
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-    </script>
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeBlogModal();
+        closeAuthModal();
+      }
+    });
+  </script>
 </body>
 </html>
+ 

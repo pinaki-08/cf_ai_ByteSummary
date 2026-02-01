@@ -1,115 +1,136 @@
 /**
- * ByteSummary - AI-Powered URL Summarizer
+ * ByteSummary - AI-Powered Tech Blog Aggregator
  * Cloudflare Worker with Workers AI (Llama 3.3) integration
- * Now with per-user portal support
+ * Automatically fetches and summarizes tech blogs from major companies
  */
 
-// Simple token-based auth (in production, use Cloudflare Access or OAuth)
+// Blog sources configuration
+const BLOG_SOURCES = [
+  {
+    id: 'meta',
+    name: 'Meta Engineering',
+    url: 'https://engineering.fb.com/',
+    logo: '🔵',
+    color: '#0668E1'
+  },
+  {
+    id: 'uber',
+    name: 'Uber Engineering',
+    url: 'https://www.uber.com/en-US/blog/engineering/',
+    logo: '⚫',
+    color: '#000000'
+  },
+  {
+    id: 'cloudflare',
+    name: 'Cloudflare Engineering',
+    url: 'https://blog.cloudflare.com/',
+    logo: '🟠',
+    color: '#F6821F'
+  },
+  {
+    id: 'microsoft',
+    name: 'Microsoft DevBlogs',
+    url: 'https://devblogs.microsoft.com/engineering-at-microsoft/',
+    logo: '🟦',
+    color: '#0078D4'
+  }
+];
+
+const CATEGORIES = [
+  { id: 'all', name: 'All Topics', icon: '📚' },
+  { id: 'ml', name: 'Machine Learning', icon: '🤖' },
+  { id: 'engineering', name: 'Engineering', icon: '⚙️' },
+  { id: 'infrastructure', name: 'Infrastructure', icon: '🏗️' },
+  { id: 'data', name: 'Data', icon: '📊' },
+  { id: 'mobile', name: 'Mobile', icon: '📱' },
+  { id: 'web', name: 'Web', icon: '🌐' }
+];
+
 const COOKIE_NAME = "bytesummary_session";
-const SESSION_EXPIRY = 7 * 24 * 60 * 60; // 7 days in seconds
+const SESSION_EXPIRY = 7 * 24 * 60 * 60;
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     
-    // Handle CORS preflight
     if (request.method === "OPTIONS") {
       return handleCORS();
     }
 
-    // Auth Routes (no auth required)
+    // Auth Routes
     if (url.pathname === "/api/auth/register" && request.method === "POST") {
       return handleRegister(request, env);
     }
-
     if (url.pathname === "/api/auth/login" && request.method === "POST") {
       return handleLogin(request, env);
     }
-
     if (url.pathname === "/api/auth/logout" && request.method === "POST") {
       return handleLogout();
     }
-
     if (url.pathname === "/api/auth/me" && request.method === "GET") {
       return handleGetCurrentUser(request, env);
     }
 
-    // API Routes (with optional auth for personalization)
-    if (url.pathname === "/api/summarize" && request.method === "POST") {
-      return handleSummarize(request, env);
+    // Blog API Routes
+    if (url.pathname === "/api/blogs" && request.method === "GET") {
+      return handleGetBlogs(request, env);
+    }
+    if (url.pathname === "/api/blogs/sources" && request.method === "GET") {
+      return handleGetSources();
+    }
+    if (url.pathname === "/api/blogs/categories" && request.method === "GET") {
+      return handleGetCategories();
+    }
+    if (url.pathname.match(/^\/api\/blogs\/[^/]+$/) && request.method === "GET") {
+      const blogId = url.pathname.split("/api/blogs/")[1];
+      return handleGetBlogDetail(blogId, env);
     }
 
-    if (url.pathname === "/api/history" && request.method === "GET") {
-      return handleHistory(request, env);
+    // Manual refresh endpoint
+    if (url.pathname === "/api/refresh" && request.method === "POST") {
+      ctx.waitUntil(fetchAndProcessBlogs(env));
+      return jsonResponse({ success: true, message: 'Blog refresh started in background' });
     }
 
-    if (url.pathname === "/api/clear-history" && request.method === "POST") {
-      return handleClearHistory(request, env);
+    // Job status endpoint
+    if (url.pathname === "/api/job-status" && request.method === "GET") {
+      return handleGetJobStatus(env);
     }
 
-    // User stats endpoint
-    if (url.pathname === "/api/user/stats" && request.method === "GET") {
-      return handleUserStats(request, env);
+    // Clear cache endpoint
+    if (url.pathname === "/api/clear-cache" && request.method === "POST") {
+      return handleClearCache(env);
     }
 
-    // Let the assets binding handle static files (configured in wrangler.toml)
-    // If no asset found, return 404
-    return new Response("Not Found", { status: 404 });
+    return env.ASSETS.fetch(request);
   },
+
+  // Scheduled task - runs daily
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(fetchAndProcessBlogs(env));
+  }
 };
 
-// ==================== AUTH HELPERS ====================
+// ==================== CORS HELPERS ====================
 
-function generateSessionToken() {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+function corsHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  };
 }
 
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
+function handleCORS() {
+  return new Response(null, { headers: corsHeaders() });
 }
 
-function getSessionToken(request) {
-  const cookieHeader = request.headers.get("Cookie") || "";
-  const cookies = Object.fromEntries(
-    cookieHeader.split(";").map(c => {
-      const [key, ...val] = c.trim().split("=");
-      return [key, val.join("=")];
-    })
-  );
-  return cookies[COOKIE_NAME] || null;
-}
-
-async function getCurrentUser(request, env) {
-  const token = getSessionToken(request);
-  if (!token) return null;
-
-  try {
-    const sessionData = await env.SUMMARIES_CACHE?.get(`session:${token}`);
-    if (!sessionData) return null;
-    
-    const session = JSON.parse(sessionData);
-    const userData = await env.SUMMARIES_CACHE?.get(`user:${session.userId}`);
-    if (!userData) return null;
-    
-    const user = JSON.parse(userData);
-    return { id: session.userId, email: user.email, name: user.name };
-  } catch (e) {
-    console.log("Auth error:", e);
-    return null;
-  }
-}
-
-function setSessionCookie(token) {
-  return `${COOKIE_NAME}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_EXPIRY}`;
-}
-
-function clearSessionCookie() {
-  return `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0`;
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: corsHeaders()
+  });
 }
 
 // ==================== AUTH HANDLERS ====================
@@ -117,450 +138,687 @@ function clearSessionCookie() {
 async function handleRegister(request, env) {
   try {
     const { email, password, name } = await request.json();
-
-    if (!email || !password) {
-      return new Response(
-        JSON.stringify({ error: "Email and password are required" }),
-        { status: 400, headers: corsHeaders() }
-      );
-    }
-
-    if (password.length < 6) {
-      return new Response(
-        JSON.stringify({ error: "Password must be at least 6 characters" }),
-        { status: 400, headers: corsHeaders() }
-      );
-    }
-
-    // Check if user exists
-    const existingUser = await env.SUMMARIES_CACHE?.get(`user_email:${email.toLowerCase()}`);
-    if (existingUser) {
-      return new Response(
-        JSON.stringify({ error: "Email already registered" }),
-        { status: 400, headers: corsHeaders() }
-      );
-    }
-
-    // Create user
-    const userId = generateSessionToken().slice(0, 16);
-    const passwordHash = await hashPassword(password);
     
+    if (!email || !password || !name) {
+      return jsonResponse({ error: "Email, password, and name are required" }, 400);
+    }
+    
+    const existingUser = await env.SUMMARIES_CACHE.get(`user:${email}`);
+    if (existingUser) {
+      return jsonResponse({ error: "User already exists" }, 400);
+    }
+    
+    const userId = crypto.randomUUID();
     const user = {
       id: userId,
-      email: email.toLowerCase(),
-      name: name || email.split("@")[0],
-      passwordHash,
-      createdAt: new Date().toISOString(),
+      email,
+      name,
+      password: await hashPassword(password),
+      createdAt: new Date().toISOString()
     };
-
-    // Store user data
-    await env.SUMMARIES_CACHE?.put(`user:${userId}`, JSON.stringify(user));
-    await env.SUMMARIES_CACHE?.put(`user_email:${email.toLowerCase()}`, userId);
-
-    // Create session
-    const sessionToken = generateSessionToken();
-    await env.SUMMARIES_CACHE?.put(
-      `session:${sessionToken}`,
-      JSON.stringify({ userId, createdAt: new Date().toISOString() }),
-      { expirationTtl: SESSION_EXPIRY }
-    );
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        user: { id: userId, email: user.email, name: user.name } 
-      }),
-      { 
-        headers: {
-          ...corsHeaders(),
-          "Set-Cookie": setSessionCookie(sessionToken)
-        }
-      }
-    );
+    
+    await env.SUMMARIES_CACHE.put(`user:${email}`, JSON.stringify(user));
+    
+    const sessionId = crypto.randomUUID();
+    await env.SUMMARIES_CACHE.put(`session:${sessionId}`, JSON.stringify({
+      userId,
+      email,
+      name
+    }), { expirationTtl: SESSION_EXPIRY });
+    
+    const response = jsonResponse({ success: true, user: { email, name } });
+    response.headers.set("Set-Cookie", `${COOKIE_NAME}=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_EXPIRY}`);
+    return response;
   } catch (error) {
-    console.error("Register error:", error);
-    return new Response(
-      JSON.stringify({ error: "Registration failed" }),
-      { status: 500, headers: corsHeaders() }
-    );
+    return jsonResponse({ error: "Registration failed" }, 500);
   }
 }
 
 async function handleLogin(request, env) {
   try {
     const { email, password } = await request.json();
-
-    if (!email || !password) {
-      return new Response(
-        JSON.stringify({ error: "Email and password are required" }),
-        { status: 400, headers: corsHeaders() }
-      );
-    }
-
-    // Find user
-    const userId = await env.SUMMARIES_CACHE?.get(`user_email:${email.toLowerCase()}`);
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: "Invalid email or password" }),
-        { status: 401, headers: corsHeaders() }
-      );
-    }
-
-    const userData = await env.SUMMARIES_CACHE?.get(`user:${userId}`);
+    
+    const userData = await env.SUMMARIES_CACHE.get(`user:${email}`);
     if (!userData) {
-      return new Response(
-        JSON.stringify({ error: "Invalid email or password" }),
-        { status: 401, headers: corsHeaders() }
-      );
+      return jsonResponse({ error: "Invalid credentials" }, 401);
     }
-
+    
     const user = JSON.parse(userData);
-    const passwordHash = await hashPassword(password);
-
-    if (user.passwordHash !== passwordHash) {
-      return new Response(
-        JSON.stringify({ error: "Invalid email or password" }),
-        { status: 401, headers: corsHeaders() }
-      );
+    const isValid = await verifyPassword(password, user.password);
+    
+    if (!isValid) {
+      return jsonResponse({ error: "Invalid credentials" }, 401);
     }
-
-    // Create session
-    const sessionToken = generateSessionToken();
-    await env.SUMMARIES_CACHE?.put(
-      `session:${sessionToken}`,
-      JSON.stringify({ userId, createdAt: new Date().toISOString() }),
-      { expirationTtl: SESSION_EXPIRY }
-    );
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        user: { id: userId, email: user.email, name: user.name } 
-      }),
-      { 
-        headers: {
-          ...corsHeaders(),
-          "Set-Cookie": setSessionCookie(sessionToken)
-        }
-      }
-    );
+    
+    const sessionId = crypto.randomUUID();
+    await env.SUMMARIES_CACHE.put(`session:${sessionId}`, JSON.stringify({
+      userId: user.id,
+      email: user.email,
+      name: user.name
+    }), { expirationTtl: SESSION_EXPIRY });
+    
+    const response = jsonResponse({ success: true, user: { email: user.email, name: user.name } });
+    response.headers.set("Set-Cookie", `${COOKIE_NAME}=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_EXPIRY}`);
+    return response;
   } catch (error) {
-    console.error("Login error:", error);
-    return new Response(
-      JSON.stringify({ error: "Login failed" }),
-      { status: 500, headers: corsHeaders() }
-    );
+    return jsonResponse({ error: "Login failed" }, 500);
   }
 }
 
-async function handleLogout() {
-  return new Response(
-    JSON.stringify({ success: true }),
-    { 
-      headers: {
-        ...corsHeaders(),
-        "Set-Cookie": clearSessionCookie()
-      }
-    }
-  );
+function handleLogout() {
+  const response = jsonResponse({ success: true });
+  response.headers.set("Set-Cookie", `${COOKIE_NAME}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
+  return response;
 }
 
 async function handleGetCurrentUser(request, env) {
-  const user = await getCurrentUser(request, env);
-  
-  if (!user) {
-    return new Response(
-      JSON.stringify({ user: null }),
-      { headers: corsHeaders() }
-    );
+  const sessionId = getSessionFromCookie(request);
+  if (!sessionId) {
+    return jsonResponse({ user: null });
   }
-
-  return new Response(
-    JSON.stringify({ user }),
-    { headers: corsHeaders() }
-  );
+  
+  const sessionData = await env.SUMMARIES_CACHE.get(`session:${sessionId}`);
+  if (!sessionData) {
+    return jsonResponse({ user: null });
+  }
+  
+  const session = JSON.parse(sessionData);
+  return jsonResponse({ user: { email: session.email, name: session.name } });
 }
 
-async function handleUserStats(request, env) {
-  const user = await getCurrentUser(request, env);
-  
-  if (!user) {
-    return new Response(
-      JSON.stringify({ error: "Not authenticated" }),
-      { status: 401, headers: corsHeaders() }
-    );
-  }
-
-  try {
-    const historyKey = `user_history:${user.id}`;
-    const history = await env.SUMMARIES_CACHE?.get(historyKey);
-    const historyData = history ? JSON.parse(history) : [];
-
-    return new Response(
-      JSON.stringify({
-        totalSummaries: historyData.length,
-        recentActivity: historyData.slice(0, 5),
-        memberSince: user.createdAt || "Unknown"
-      }),
-      { headers: corsHeaders() }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ totalSummaries: 0, recentActivity: [] }),
-      { headers: corsHeaders() }
-    );
-  }
+function getSessionFromCookie(request) {
+  const cookie = request.headers.get("Cookie") || "";
+  const match = cookie.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
+  return match ? match[1] : null;
 }
 
-// ==================== EXISTING FUNCTIONS (UPDATED) ====================
+async function hashPassword(password) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + "bytesummary_salt_v1");
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return btoa(String.fromCharCode(...new Uint8Array(hash)));
+}
 
-function handleCORS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Allow-Credentials": "true",
-      "Access-Control-Max-Age": "86400",
-    },
+async function verifyPassword(password, hash) {
+  const newHash = await hashPassword(password);
+  return newHash === hash;
+}
+
+// ==================== BLOG API HANDLERS ====================
+
+async function handleGetBlogs(request, env) {
+  const url = new URL(request.url);
+  const source = url.searchParams.get('source') || 'all';
+  const category = url.searchParams.get('category') || 'all';
+  const days = parseInt(url.searchParams.get('days') || '30');
+  
+  // Get blog index
+  const indexData = await env.SUMMARIES_CACHE.get('blogs:index');
+  let blogs = indexData ? JSON.parse(indexData) : [];
+  
+  // Apply filters
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  
+  blogs = blogs.filter(blog => {
+    if (source !== 'all' && blog.source !== source) return false;
+    if (category !== 'all' && blog.category !== category) return false;
+    if (new Date(blog.fetchedAt) < cutoffDate) return false;
+    return true;
   });
+  
+  // Sort by date, newest first
+  blogs.sort((a, b) => new Date(b.fetchedAt) - new Date(a.fetchedAt));
+  
+  return jsonResponse({ blogs, total: blogs.length });
 }
 
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Credentials": "true",
-    "Content-Type": "application/json",
-  };
+function handleGetSources() {
+  return jsonResponse({ sources: BLOG_SOURCES });
 }
 
-async function handleSummarize(request, env) {
-  try {
-    const { url: targetUrl } = await request.json();
-    const user = await getCurrentUser(request, env);
+function handleGetCategories() {
+  return jsonResponse({ categories: CATEGORIES });
+}
 
-    if (!targetUrl) {
-      return new Response(
-        JSON.stringify({ error: "URL is required" }),
-        { status: 400, headers: corsHeaders() }
-      );
-    }
-
-    // Validate URL
-    let parsedUrl;
-    try {
-      parsedUrl = new URL(targetUrl);
-    } catch {
-      return new Response(
-        JSON.stringify({ error: "Invalid URL format" }),
-        { status: 400, headers: corsHeaders() }
-      );
-    }
-
-    // Check cache first (memory/state) - user-specific if logged in
-    const cacheKey = user 
-      ? `user_summary:${user.id}:${targetUrl}`
-      : `summary:${targetUrl}`;
-    let cached = null;
-    
-    try {
-      cached = await env.SUMMARIES_CACHE?.get(cacheKey);
-      if (cached) {
-        const cachedData = JSON.parse(cached);
-        return new Response(
-          JSON.stringify({ ...cachedData, fromCache: true }),
-          { headers: corsHeaders() }
-        );
-      }
-    } catch (e) {
-      console.log("Cache miss or error:", e);
-    }
-
-    // Fetch the webpage content
-    const pageContent = await fetchPageContent(targetUrl);
-    
-    if (!pageContent.success) {
-      return new Response(
-        JSON.stringify({ error: pageContent.error }),
-        { status: 400, headers: corsHeaders() }
-      );
-    }
-
-    // Generate summary using Workers AI (Llama 3.3)
-    const summary = await generateSummary(env, pageContent.content, pageContent.title, targetUrl);
-
-    const result = {
-      url: targetUrl,
-      title: pageContent.title,
-      summary: summary,
-      timestamp: new Date().toISOString(),
-      fromCache: false,
-      userId: user?.id || null,
-    };
-
-    // Store in cache (memory/state) - cache for 1 hour
-    try {
-      await env.SUMMARIES_CACHE?.put(cacheKey, JSON.stringify(result), {
-        expirationTtl: 3600,
-      });
-
-      // Also store in history (user-specific if logged in)
-      await addToHistory(env, result, user);
-    } catch (e) {
-      console.log("Cache write error:", e);
-    }
-
-    return new Response(JSON.stringify(result), { headers: corsHeaders() });
-  } catch (error) {
-    console.error("Summarize error:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to process request: " + error.message }),
-      { status: 500, headers: corsHeaders() }
-    );
+async function handleGetBlogDetail(blogId, env) {
+  const blogData = await env.SUMMARIES_CACHE.get(`blog:${blogId}`);
+  if (!blogData) {
+    return jsonResponse({ error: "Blog not found" }, 404);
   }
+  return jsonResponse({ blog: JSON.parse(blogData) });
 }
 
-async function fetchPageContent(url) {
-  try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; ByteSummary/1.0; +https://bytesummary.pages.dev)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
+async function handleGetJobStatus(env) {
+  const statusData = await env.SUMMARIES_CACHE.get('job:status');
+  if (!statusData) {
+    return jsonResponse({ 
+      status: 'idle', 
+      message: 'No job has been run yet',
+      lastRun: null 
     });
+  }
+  return jsonResponse(JSON.parse(statusData));
+}
 
-    if (!response.ok) {
-      return { success: false, error: `Failed to fetch URL: ${response.status}` };
-    }
-
-    const html = await response.text();
+async function handleClearCache(env) {
+  try {
+    // Clear the blog index
+    await env.SUMMARIES_CACHE.delete('blogs:index');
+    await env.SUMMARIES_CACHE.delete('job:status');
     
-    // Extract title
-    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const title = titleMatch ? titleMatch[1].trim() : "Untitled";
-
-    // Extract main content (remove scripts, styles, nav, footer, etc.)
-    let content = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-      .replace(/<(nav|header|footer|aside)\b[^<]*(?:(?!<\/\1>)<[^<]*)*<\/\1>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    content = content.slice(0, 8000);
-
-    return { success: true, content, title };
+    // List and delete all blog entries
+    const listResult = await env.SUMMARIES_CACHE.list({ prefix: 'blog:' });
+    for (const key of listResult.keys) {
+      await env.SUMMARIES_CACHE.delete(key.name);
+    }
+    
+    return jsonResponse({ 
+      success: true, 
+      message: `Cache cleared (${listResult.keys.length} entries). Click "Fetch Latest Blogs" to refetch.` 
+    });
   } catch (error) {
-    return { success: false, error: `Failed to fetch content: ${error.message}` };
+    console.error('Clear cache error:', error);
+    return jsonResponse({ error: 'Failed to clear cache' }, 500);
   }
 }
 
-async function generateSummary(env, content, title, url) {
-  const prompt = `You are a tech content summarizer. Analyze the following webpage content and provide a comprehensive summary focused on the key technical information.
+// ==================== BLOG FETCHING & PROCESSING ====================
+
+async function updateJobStatus(env, status) {
+  await env.SUMMARIES_CACHE.put('job:status', JSON.stringify({
+    ...status,
+    updatedAt: new Date().toISOString()
+  }), { expirationTtl: 24 * 60 * 60 }); // 24 hour TTL
+}
+
+async function fetchAndProcessBlogs(env) {
+  console.log("Starting blog fetch...");
+  
+  const jobStatus = {
+    status: 'running',
+    message: 'Starting blog fetch...',
+    startedAt: new Date().toISOString(),
+    sources: {},
+    totalArticles: 0,
+    processedArticles: 0,
+    errors: []
+  };
+  
+  await updateJobStatus(env, jobStatus);
+  
+  for (const source of BLOG_SOURCES) {
+    try {
+      console.log(`Fetching from ${source.name}...`);
+      jobStatus.message = `Fetching from ${source.name}...`;
+      jobStatus.sources[source.id] = { status: 'fetching', articles: 0, processed: 0 };
+      await updateJobStatus(env, jobStatus);
+      
+      const articles = await fetchBlogArticles(source);
+      console.log(`Found ${articles.length} articles from ${source.name}`);
+      
+      jobStatus.sources[source.id].articles = articles.length;
+      jobStatus.sources[source.id].status = 'processing';
+      jobStatus.totalArticles += Math.min(articles.length, 5);
+      await updateJobStatus(env, jobStatus);
+      
+      for (const article of articles.slice(0, 5)) { // Process top 5 per source
+        try {
+          jobStatus.message = `Processing: ${article.title?.slice(0, 50) || article.url}...`;
+          await updateJobStatus(env, jobStatus);
+          
+          await processArticle(article, source, env);
+          
+          jobStatus.sources[source.id].processed++;
+          jobStatus.processedArticles++;
+          await updateJobStatus(env, jobStatus);
+        } catch (err) {
+          console.error(`Error processing article ${article.url}:`, err);
+          jobStatus.errors.push({ source: source.id, url: article.url, error: err.message });
+        }
+      }
+      
+      jobStatus.sources[source.id].status = 'completed';
+      await updateJobStatus(env, jobStatus);
+    } catch (err) {
+      console.error(`Error fetching from ${source.name}:`, err);
+      jobStatus.sources[source.id] = { status: 'error', error: err.message };
+      jobStatus.errors.push({ source: source.id, error: err.message });
+      await updateJobStatus(env, jobStatus);
+    }
+  }
+  
+  jobStatus.status = 'completed';
+  jobStatus.message = `Completed! Processed ${jobStatus.processedArticles} articles.`;
+  jobStatus.completedAt = new Date().toISOString();
+  await updateJobStatus(env, jobStatus);
+  
+  console.log("Blog fetch complete!");
+}
+
+async function fetchBlogArticles(source) {
+  // Use full browser headers to avoid bot detection
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1'
+  };
+  
+  const response = await fetch(source.url, { 
+    headers,
+    redirect: 'follow'
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${source.url}: ${response.status}`);
+  }
+  
+  const html = await response.text();
+  const articles = [];
+  
+  if (source.id === 'meta') {
+    // Parse Meta Engineering blog
+    const articleMatches = html.matchAll(/<a[^>]*href="(https:\/\/engineering\.fb\.com\/\d{4}\/\d{2}\/\d{2}\/[^"]+)"[^>]*>([^<]*)<\/a>/gi);
+    for (const match of articleMatches) {
+      const url = match[1];
+      const title = match[2].trim();
+      if (title && !articles.some(a => a.url === url)) {
+        articles.push({ url, title });
+      }
+    }
+    
+    // Also try to find article titles in different patterns
+    const titleMatches = html.matchAll(/<h[23][^>]*>.*?<a[^>]*href="(https:\/\/engineering\.fb\.com\/[^"]+)"[^>]*>([^<]+)<\/a>/gis);
+    for (const match of titleMatches) {
+      const url = match[1];
+      const title = match[2].trim();
+      if (title && !articles.some(a => a.url === url)) {
+        articles.push({ url, title });
+      }
+    }
+  } else if (source.id === 'uber') {
+    // Parse Uber Engineering blog - look for relative blog article links
+    // Uber uses relative URLs like /blog/article-name/
+    const skipPatterns = ['/engineering', '/advertising', '/earn', '/ride', '/eat', '/merchants', 
+                         '/business', '/freight', '/health', '/higher-education', '/transit',
+                         '/careers', '/community-support', '/research', '/category', '/tag'];
+    
+    // Pattern 1: Relative URLs /blog/article-slug/
+    const relativeMatches = html.matchAll(/href="(\/blog\/[a-z0-9-]+\/?)"[^>]*>/gi);
+    for (const match of relativeMatches) {
+      const path = match[1].replace(/\/$/, '');
+      const slug = path.replace('/blog/', '');
+      
+      // Skip non-article pages
+      if (skipPatterns.some(p => path.includes(p)) || slug.length < 5) continue;
+      
+      const url = `https://www.uber.com${path}/`;
+      if (!articles.some(a => a.url === url)) {
+        // Convert slug to title
+        const title = slug.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        articles.push({ url, title });
+      }
+    }
+    
+    // Pattern 2: Full URLs with en-US or other locale
+    const fullUrlMatches = html.matchAll(/href="(https:\/\/www\.uber\.com\/(?:en-[A-Z]{2}\/)?blog\/[a-z0-9-]+\/?)"[^>]*>/gi);
+    for (const match of fullUrlMatches) {
+      let url = match[1].replace(/\/$/, '') + '/';
+      // Normalize to non-locale URL
+      url = url.replace(/\/en-[A-Z]{2}\/blog\//, '/blog/');
+      const slug = url.match(/\/blog\/([^/]+)/)?.[1];
+      
+      if (!slug || slug.length < 5) continue;
+      if (skipPatterns.some(p => url.includes(p))) continue;
+      
+      if (!articles.some(a => a.url === url)) {
+        const title = slug.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        articles.push({ url, title });
+      }
+    }
+    
+    console.log(`Uber: Found ${articles.length} articles`);
+  } else if (source.id === 'cloudflare') {
+    // Parse Cloudflare Blog - look for relative URLs like /article-slug/
+    const skipSlugs = ['tag', 'author', 'page', 'category', 'search', 'about', 'contact', 'rss', 'feed', 'cdn-cgi'];
+    // Language code patterns to skip (e.g., de-de, es-es, fr-fr)
+    const langPattern = /^[a-z]{2}-[a-z]{2}$/;
+    
+    // Pattern 1: Relative URLs /article-slug/
+    const relativeMatches = html.matchAll(/href="\/(([a-z0-9])[a-z0-9-]+)\/?"/gi);
+    for (const match of relativeMatches) {
+      const slug = match[1];
+      
+      // Skip language pages, short slugs, and navigation pages
+      if (!slug || slug.length < 8 || skipSlugs.includes(slug)) continue;
+      if (langPattern.test(slug)) continue;
+      
+      const url = `https://blog.cloudflare.com/${slug}/`;
+      if (!articles.some(a => a.url === url)) {
+        const title = slug.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        articles.push({ url, title });
+      }
+    }
+    
+    // Pattern 2: Full URLs
+    const fullMatches = html.matchAll(/href="(https:\/\/blog\.cloudflare\.com\/([a-z0-9][a-z0-9-]+)\/?)"[^>]*>/gi);
+    for (const match of fullMatches) {
+      const url = match[1].replace(/\/$/, '') + '/';
+      const slug = match[2];
+      
+      if (!slug || slug.length < 8 || skipSlugs.includes(slug)) continue;
+      if (langPattern.test(slug)) continue;
+      
+      if (!articles.some(a => a.url === url)) {
+        const title = slug.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        articles.push({ url, title });
+      }
+    }
+    
+    console.log(`Cloudflare: Found ${articles.length} articles`);
+  } else if (source.id === 'microsoft') {
+    // Parse Microsoft Engineering at Microsoft DevBlogs
+    const skipSlugs = ['tag', 'author', 'page', 'category', 'search', 'about', 'contact', 'feed', 'archive'];
+    
+    // Look for article links - engineering-at-microsoft/article-slug pattern
+    const articleMatches = html.matchAll(/href="(https:\/\/devblogs\.microsoft\.com\/engineering-at-microsoft\/[a-z0-9-]+\/?)"[^>]*>/gi);
+    for (const match of articleMatches) {
+      const url = match[1].replace(/\/$/, '') + '/';
+      const slug = url.match(/engineering-at-microsoft\/([^/]+)/)?.[1];
+      
+      if (!slug || slug.length < 5 || skipSlugs.includes(slug)) continue;
+      
+      if (!articles.some(a => a.url === url)) {
+        const title = slug.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        articles.push({ url, title });
+      }
+    }
+    
+    // Also look for other devblogs sections (dotnet, typescript, etc.)
+    const otherMatches = html.matchAll(/href="(https:\/\/devblogs\.microsoft\.com\/([a-z0-9-]+)\/([a-z0-9-]+)\/?)"[^>]*>/gi);
+    for (const match of otherMatches) {
+      const url = match[1].replace(/\/$/, '') + '/';
+      const category = match[2];
+      const slug = match[3];
+      
+      // Skip navigation/meta pages
+      const skipCategories = ['tag', 'author', 'page', 'category', 'search', 'feed', 'landingpage'];
+      if (skipCategories.includes(category) || skipSlugs.includes(slug) || slug.length < 5) continue;
+      
+      if (!articles.some(a => a.url === url)) {
+        const title = slug.split('-').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1)
+        ).join(' ');
+        articles.push({ url, title });
+      }
+    }
+    
+    // Extract titles from headings with links
+    const titleMatches = html.matchAll(/<a[^>]*href="(https:\/\/devblogs\.microsoft\.com\/[^"]+\/[^"]+)"[^>]*>([^<]{15,150})<\/a>/gi);
+    for (const match of titleMatches) {
+      const url = match[1].replace(/\/$/, '') + '/';
+      const title = match[2].trim();
+      
+      // Skip URLs with query params or anchors
+      if (url.includes('?') || url.includes('#')) continue;
+      if (title.length < 15) continue;
+      
+      if (title && !articles.some(a => a.url === url)) {
+        articles.push({ url, title });
+      }
+    }
+    
+    console.log(`Microsoft: Found ${articles.length} articles`);
+  }
+  
+  return articles;
+}
+
+async function processArticle(article, source, env) {
+  const blogId = generateBlogId(article.url);
+  
+  // Check if already processed
+  const existing = await env.SUMMARIES_CACHE.get(`blog:${blogId}`);
+  if (existing) {
+    console.log(`Article already processed: ${article.url}`);
+    // Still need to ensure it's in the index (in case index was cleared)
+    const blogEntry = JSON.parse(existing);
+    await addToIndex(blogEntry, source, env);
+    return;
+  }
+  
+  // Fetch article content with full browser headers
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5'
+  };
+  
+  const response = await fetch(article.url, { 
+    headers,
+    redirect: 'follow'
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch article: ${response.status}`);
+  }
+  
+  const html = await response.text();
+  const content = extractArticleContent(html);
+  
+  if (!content || content.length < 200) {
+    console.log(`Insufficient content for: ${article.url}`);
+    return;
+  }
+  
+  // Generate AI summary
+  const summary = await generateBlogSummary(article.title || extractTitle(html), content, env);
+  
+  // Detect category
+  const category = detectCategory(content, article.title || '');
+  
+  // Create blog entry
+  const blogEntry = {
+    id: blogId,
+    source: source.id,
+    sourceName: source.name,
+    sourceLogo: source.logo,
+    sourceColor: source.color,
+    url: article.url,
+    title: article.title || extractTitle(html) || 'Untitled',
+    category,
+    summary: summary.brief,
+    fullSummary: summary.detailed,
+    keyPoints: summary.keyPoints,
+    technologies: summary.technologies,
+    fetchedAt: new Date().toISOString(),
+    contentLength: content.length
+  };
+  
+  // Store blog entry
+  await env.SUMMARIES_CACHE.put(`blog:${blogId}`, JSON.stringify(blogEntry), {
+    expirationTtl: 30 * 24 * 60 * 60 // 30 days
+  });
+  
+  // Update index
+  await addToIndex(blogEntry, source, env);
+  
+  console.log(`Processed: ${blogEntry.title}`);
+}
+
+// Helper function to add a blog entry to the index
+async function addToIndex(blogEntry, source, env) {
+  const indexData = await env.SUMMARIES_CACHE.get('blogs:index');
+  let index = indexData ? JSON.parse(indexData) : [];
+  
+  // Add to index if not already there
+  if (!index.some(b => b.id === blogEntry.id)) {
+    index.unshift({
+      id: blogEntry.id,
+      source: source.id,
+      sourceName: source.name,
+      sourceLogo: source.logo,
+      title: blogEntry.title,
+      category: blogEntry.category,
+      summary: blogEntry.summary,
+      technologies: blogEntry.technologies || [],
+      fetchedAt: blogEntry.fetchedAt
+    });
+    
+    // Keep only last 100 entries in index
+    index = index.slice(0, 100);
+    
+    await env.SUMMARIES_CACHE.put('blogs:index', JSON.stringify(index), {
+      expirationTtl: 30 * 24 * 60 * 60
+    });
+  }
+}
+
+function generateBlogId(url) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(url);
+  let hash = 0;
+  for (let i = 0; i < data.length; i++) {
+    hash = ((hash << 5) - hash) + data[i];
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}
+
+function extractArticleContent(html) {
+  // Remove scripts, styles, and HTML tags
+  let content = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Limit content length for API
+  return content.slice(0, 8000);
+}
+
+function extractTitle(html) {
+  const match = html.match(/<title>([^<]+)<\/title>/i);
+  return match ? match[1].trim() : null;
+}
+
+function detectCategory(content, title) {
+  const text = (content + ' ' + title).toLowerCase();
+  
+  const categoryKeywords = {
+    ml: ['machine learning', 'ml', 'ai', 'artificial intelligence', 'neural network', 'deep learning', 'model', 'training', 'inference', 'pytorch', 'tensorflow', 'llm', 'gpt', 'transformer'],
+    infrastructure: ['infrastructure', 'kubernetes', 'k8s', 'docker', 'container', 'cloud', 'aws', 'gcp', 'azure', 'serverless', 'microservices', 'scalability', 'reliability'],
+    data: ['data', 'database', 'sql', 'nosql', 'analytics', 'pipeline', 'etl', 'warehouse', 'lake', 'streaming', 'kafka', 'spark', 'hadoop'],
+    mobile: ['mobile', 'ios', 'android', 'swift', 'kotlin', 'react native', 'flutter', 'app'],
+    web: ['web', 'frontend', 'react', 'javascript', 'typescript', 'css', 'html', 'browser', 'performance', 'ui', 'ux']
+  };
+  
+  let maxScore = 0;
+  let detectedCategory = 'engineering';
+  
+  for (const [category, keywords] of Object.entries(categoryKeywords)) {
+    let score = 0;
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) {
+        score++;
+      }
+    }
+    if (score > maxScore) {
+      maxScore = score;
+      detectedCategory = category;
+    }
+  }
+  
+  return detectedCategory;
+}
+
+async function generateBlogSummary(title, content, env) {
+  try {
+    // Truncate content to avoid token limits
+    const truncatedContent = content.slice(0, 4000);
+    
+    const prompt = `Summarize this tech blog article in JSON format.
 
 Title: ${title}
-URL: ${url}
 
-Content:
-${content}
+Content: ${truncatedContent}
 
-Please provide:
-1. **Overview**: A brief 2-3 sentence overview of what this content is about
-2. **Key Points**: The main technical points or features (bullet points)
-3. **Tech Stack/Technologies**: Any technologies, frameworks, or tools mentioned
-4. **Takeaways**: Key insights or actionable items
+Return ONLY this JSON (no other text):
+{"brief":"2-3 sentence summary","detailed":"detailed summary","keyPoints":["point1","point2","point3"],"technologies":["tech1","tech2"]}`;
 
-Keep the summary informative yet concise. Focus on technical details that would be valuable for a developer or tech professional.`;
-
-  try {
-    const response = await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+    console.log('Calling AI for:', title.slice(0, 50));
+    
+    // Try the smaller, faster model first
+    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
       messages: [
-        {
-          role: "system",
-          content: "You are a helpful tech content summarizer that creates clear, structured summaries of technical articles and documentation. Always format your response with clear sections using markdown."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
+        { role: 'user', content: prompt }
       ],
-      max_tokens: 1024,
-      temperature: 0.3,
+      max_tokens: 800
     });
 
-    return response.response || "Unable to generate summary.";
-  } catch (error) {
-    console.error("AI error:", error);
-    return `**Overview**: Content from ${title}\n\n**Note**: AI summarization temporarily unavailable. The page contains approximately ${content.length} characters of text content.`;
-  }
-}
-
-async function addToHistory(env, result, user) {
-  try {
-    // User-specific history if logged in, otherwise global
-    const historyKey = user ? `user_history:${user.id}` : "summary_history";
-    let history = [];
+    const text = response.response || response.text || '';
+    console.log('AI Response length:', text.length, 'Preview:', text.slice(0, 150));
     
-    const existing = await env.SUMMARIES_CACHE?.get(historyKey);
-    if (existing) {
-      history = JSON.parse(existing);
+    // Try to parse JSON from response
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        // Validate the parsed object has expected fields
+        if (parsed.brief && typeof parsed.brief === 'string') {
+          return {
+            brief: parsed.brief,
+            detailed: parsed.detailed || parsed.brief,
+            keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
+            technologies: Array.isArray(parsed.technologies) ? parsed.technologies : []
+          };
+        }
+      }
+    } catch (e) {
+      console.error('JSON parse error:', e.message, 'Text:', text.slice(0, 100));
+    }
+
+    // Fallback - try to extract useful text
+    const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
+    if (cleanText.length > 50) {
+      return {
+        brief: cleanText.slice(0, 300),
+        detailed: cleanText,
+        keyPoints: [],
+        technologies: []
+      };
     }
     
-    // Add new entry at the beginning
-    history.unshift({
-      url: result.url,
-      title: result.title,
-      timestamp: result.timestamp,
-    });
-    
-    // Keep only last 50 entries
-    history = history.slice(0, 50);
-    
-    await env.SUMMARIES_CACHE?.put(historyKey, JSON.stringify(history));
-  } catch (e) {
-    console.log("History update error:", e);
-  }
-}
-
-async function handleHistory(request, env) {
-  try {
-    const user = await getCurrentUser(request, env);
-    const historyKey = user ? `user_history:${user.id}` : "summary_history";
-    const history = await env.SUMMARIES_CACHE?.get(historyKey);
-    
-    return new Response(
-      JSON.stringify({ history: history ? JSON.parse(history) : [] }),
-      { headers: corsHeaders() }
-    );
+    return {
+      brief: `Summary for: ${title.slice(0, 100)}`,
+      detailed: 'Full summary generation pending.',
+      keyPoints: [],
+      technologies: []
+    };
   } catch (error) {
-    return new Response(
-      JSON.stringify({ history: [] }),
-      { headers: corsHeaders() }
-    );
-  }
-}
-
-async function handleClearHistory(request, env) {
-  try {
-    const user = await getCurrentUser(request, env);
-    const historyKey = user ? `user_history:${user.id}` : "summary_history";
-    await env.SUMMARIES_CACHE?.delete(historyKey);
-    return new Response(
-      JSON.stringify({ success: true }),
-      { headers: corsHeaders() }
-    );
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: corsHeaders() }
-    );
+    console.error('AI summary error:', error.message, error.stack);
+    return {
+      brief: 'Summary generation failed',
+      detailed: 'Unable to generate summary at this time.',
+      keyPoints: ['Error occurred during analysis'],
+      technologies: []
+    };
   }
 }

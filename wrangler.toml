@@ -13,3 +13,7 @@ preview_id = "a91952fd75bc49319615d14b70b520c7"
 
 [vars]
 ENVIRONMENT = "development"
+
+# Schedule: Run daily at 6 AM UTC to fetch new blog posts
+[triggers]
+crons = ["0 6 * * *"]
